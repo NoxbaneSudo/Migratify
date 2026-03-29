@@ -1,0 +1,13 @@
+# Python and virtual environments
+venv/
+env/
+__pycache__/
+*.pyc
+.env
+
+# Migration Tool Data / Secrets (DO NOT COMMIT)
+liked.csv
+headers.txt
+oauth.json
+progress.json
+failed_songs.csv
