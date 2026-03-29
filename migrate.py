@@ -288,20 +288,33 @@ def main():
                     else: return
 
                 # Check for critical absence of cookie early
-                # Clean and sanitize cURL format for ytmusicapi compatibility
+                # setup_browser() expects raw "header: value" lines, NOT a curl command
+                # So we must parse the cURL ourselves
                 if low_content.startswith("curl"):
-                    import re
-                    # Convert -b 'cookies' to -H 'cookie: cookies'
-                    raw_content = re.sub(r" -b '([^']+)'", r" -H 'cookie: \1'", raw_content)
-                    raw_content = re.sub(r' -b "([^"]+)"', r' -H "cookie: \1"', raw_content)
+                    raw_headers_lines = []
                     
-                    # Remove --data / --data-raw blocks to prevent binary parsing crashes
-                    raw_content = re.sub(r" --data-raw.*", "", raw_content, flags=re.DOTALL)
-                    raw_content = re.sub(r" --data.*", "", raw_content, flags=re.DOTALL)
+                    # Extract all -H 'header: value' entries
+                    header_matches = re.findall(r"-H '([^']+)'", raw_content)
+                    header_matches += re.findall(r'-H "([^"]+)"', raw_content)
+                    for h in header_matches:
+                        raw_headers_lines.append(h)
                     
+                    # Extract -b 'cookie_string' (Chrome puts cookies here instead of -H)
+                    cookie_matches = re.findall(r"-b '([^']+)'", raw_content)
+                    cookie_matches += re.findall(r'-b "([^"]+)"', raw_content)
+                    for c in cookie_matches:
+                        raw_headers_lines.append(f"cookie: {c}")
+                    
+                    if not raw_headers_lines:
+                        print(f"\n{Fore.RED}❌ ОШИБКА: Не удалось найти заголовки в cURL команде!")
+                        if input(t['retry_msg']).lower() == 'y': continue
+                        else: return
+                    
+                    raw_content = "\n".join(raw_headers_lines)
                     low_content = raw_content.lower()
 
                 # Check for critical absence of cookie early
+
                 if "cookie" not in low_content:
                     print(f"\n{Fore.RED}❌ ОШИБКА: Заголовок 'cookie' не найден в {HEADERS_PATH}!")
                     safe_print = raw_content[:80].replace('\n', ' ')
