@@ -103,32 +103,10 @@ LOCALES = {
         "btn_fix_load": "Load Errors", "btn_pick": "Pick", "set_title": "Settings", "set_sub": "App Preferences",
         "set_lang": "Language", "set_theme": "Theme", "set_bg": "Custom Background",
         "set_reset": "Reset Data", "btn_reset_prog": "Reset Progress", "btn_reset_auth": "Sign Out", "btn_reset_hist": "Clear History",
-        "theme_coffee": "Coffee", "theme_dark": "Dark", "theme_light": "Light", "theme_asphalt": "Asphalt",
+        "theme_coffee": "Coffee", "theme_dark": "Dark", "theme_light": "Light", "theme_asphalt": "Asphalt", "theme_nebula": "Nebula",
         "btn_load_bg": "Load Custom Image", "btn_clear_bg": "Clear Background",
-        "eta_msg": "ETA: {eta}  •  {pct}%", "conn_yes": "Connected", "conn_no": "Disconnected",
+        "eta_msg": "{pct}%  •  {eta}", "conn_yes": "Connected", "conn_no": "Disconnected",
         "msg_playlists": "Your Playlists:", "err_auth_first": "Authenticate in Migrate tab first."
-    },
-    "ru": {
-        "tab_dash": f"{ICON_HOME}  Дашборд", "tab_migrate": f"{ICON_ROCKET}  Миграция", 
-        "tab_batch": f"{ICON_BOXES}  Пакетно", "tab_fix": f"{ICON_WRENCH}  Ошибки", 
-        "tab_settings": f"{ICON_GEAR}  Настройки",
-        "auth_title": "Авторизация", "auth_desc": "Вставьте cURL из браузера для входа в YT Music.",
-        "btn_auth": "Войти", "btn_start": f"{ICON_PLAY}  ПУСК", "btn_stop": f"{ICON_STOP}  СТОП", 
-        "btn_browse": f"{ICON_FILE}  Выбрать CSV...", "dash_title": "Дашборд", "dash_sub": "Обзор процесса миграции",
-        "stat_mig": "Успешно", "stat_fail": "Ошибки", "stat_tot": "Всего", "log_title": "Лог Активности",
-        "mig_title": "Одиночная Миграция", "mig_sub": "Перенос из отдельного файла CSV",
-        "opt_smart": "Умный поиск (длительность ±90с)", "opt_rev": "В обратном порядке", "opt_dry": "Симуляция (без добавления)",
-        "dest_like": "Мне нравится", "dest_new": "Новый плейлист", "dest_exist": "Свой плейлист",
-        "batch_title": "Пакетная মিграция", "batch_sub": "Поместите CSV в папку csv_batch",
-        "btn_batch_start": "Начать", "btn_batch_open": "Открыть папку",
-        "fix_title": "Исправление Ошибок", "fix_sub": "Выбор правильных треков вручную",
-        "btn_fix_load": "Загрузить ошибки", "btn_pick": "Выбрать", "set_title": "Настройки", "set_sub": "Параметры",
-        "set_lang": "Язык", "set_theme": "Тема Оформления", "set_bg": "Свой Фон",
-        "set_reset": "Сброс Данных", "btn_reset_prog": "Сброс прогресса", "btn_reset_auth": "Выйти из YT", "btn_reset_hist": "Очистить историю",
-        "theme_coffee": "Кофейная", "theme_dark": "Тёмная", "theme_light": "Светлая", "theme_asphalt": "Асфальт",
-        "btn_load_bg": "Выбрать Картинку", "btn_clear_bg": "Удалить Фон",
-        "eta_msg": "Осталось: {eta}  •  {pct}%", "conn_yes": "Подключено", "conn_no": "Не авторизован",
-        "msg_playlists": "Ваши плейлисты:", "err_auth_first": "Сначала авторизуйтесь на вкладке ミграция."
     }
 }
 
@@ -137,19 +115,22 @@ THEMES = {
         "accent": "#F4C9D6", "hover": "#DCC2C5", "dark": "#281914",
         "surface": "#200F07", "card": "#3E2723", "border": "#5C3A21",
         "text": "#FFF0F5", "dim": "#DCC2C5", "red": "#FF6B6B",
-        "yellow": "#E9C46A", "cyan": "#A2D2FF", "green": "#00E676"
+        "yellow": "#E9C46A", "cyan": "#A2D2FF", "green": "#00E676",
+        "grad_top": "#3E2723", "grad_bot": "#200F07"
     },
     "dark": {
         "accent": "#3B82F6", "hover": "#2563EB", "dark": "#0F172A",
         "surface": "#1E293B", "card": "#0F172A", "border": "#334155",
         "text": "#F8FAFC", "dim": "#94A3B8", "red": "#EF4444",
-        "yellow": "#F59E0B", "cyan": "#38BDF8", "green": "#10B981"
+        "yellow": "#F59E0B", "cyan": "#38BDF8", "green": "#10B981",
+        "grad_top": "#1E293B", "grad_bot": "#0F172A"
     },
     "light": {
         "accent": "#2563EB", "hover": "#1D4ED8", "dark": "#F8FAFC",
         "surface": "#E2E8F0", "card": "#FFFFFF", "border": "#CBD5E1",
         "text": "#0F172A", "dim": "#64748B", "red": "#DC2626",
-        "yellow": "#D97706", "cyan": "#0284C7", "green": "#059669"
+        "yellow": "#D97706", "cyan": "#0284C7", "green": "#059669",
+        "grad_top": "#E2E8F0", "grad_bot": "#CBD5E1"
     },
     "asphalt": {
         "accent": "#efede3", "hover": "#e0ded4", "dark": "#302f2c",
@@ -157,6 +138,13 @@ THEMES = {
         "text": "#F8FAFC", "dim": "#A3A199", "red": "#FF6B6B",
         "yellow": "#F59E0B", "cyan": "#38BDF8", "green": "#00E676",
         "grad_top": "#efede3", "grad_bot": "#302f2c"
+    },
+    "nebula": {
+        "accent": "#c3b9e1", "hover": "#a59ecf", "dark": "#141026",
+        "surface": "#1c1836", "card": "#2b2659", "border": "#3e3873",
+        "text": "#f8f7ff", "dim": "#a59ecf", "red": "#FF6B6B",
+        "yellow": "#F59E0B", "cyan": "#38BDF8", "green": "#00E676",
+        "grad_top": "#141026", "grad_bot": "#6b63a6"
     }
 }
 
@@ -314,33 +302,27 @@ class MigratifyApp(ctk.CTk):
         else:
             self.bg_label.configure(image=None, fg_color=self.th("dark"))
 
-    def _apply_language(self, val):
-        self.settings["lang"] = "ru" if val == "Русский" else "en"
-        self._save_settings(); self.destroy()
-        subprocess.Popen([sys.executable, "gui.py"])
-
     def _apply_theme_setting(self, val):
         t_id_map = {
-            "Кофейная": "coffee", "Coffee": "coffee", 
-            "Dark": "dark", "Тёмная": "dark", 
-            "Light": "light", "Светлая": "light",
-            "Asphalt": "asphalt", "Асфальт": "asphalt"
+            "Coffee": "coffee", "Dark": "dark", "Light": "light", "Asphalt": "asphalt", "Nebula": "nebula"
         }
-        self.settings["theme"] = t_id_map[val]
-        self._save_settings(); self.destroy()
-        subprocess.Popen([sys.executable, "gui.py"])
+        self.theme = t_id_map[val]
+        self.settings["theme"] = self.theme
+        self._save_settings()
+        self._build_app()
+        self._render_background()
 
     def _load_custom_bg(self):
         filename = filedialog.askopenfilename(title="Select Background Image", filetypes=[("Images", "*.jpg *.jpeg *.png")])
         if filename:
             self.settings["bg_image"] = filename
-            self._save_settings(); self.destroy()
-            subprocess.Popen([sys.executable, "gui.py"])
+            self._save_settings()
+            self._render_background()
 
     def _clear_custom_bg(self):
         self.settings["bg_image"] = ""
-        self._save_settings(); self.destroy()
-        subprocess.Popen([sys.executable, "gui.py"])
+        self._save_settings()
+        self._render_background()
 
     def _build_app(self):
         # We handle backgrounds manually
@@ -358,8 +340,8 @@ class MigratifyApp(ctk.CTk):
         navbar.grid(row=0, column=0, sticky="ew")
         navbar.grid_columnconfigure(1, weight=1)
 
-        # Logo + Moon
-        logo_txt = f"Migratify  {ICON_MOON}"
+        # Logo
+        logo_txt = "Migratify"
         logo = ctk.CTkLabel(navbar, text=logo_txt, font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"), text_color=self.th("accent"))
         logo.pack(side="left", padx=(24, 0), pady=12)
 
@@ -375,7 +357,6 @@ class MigratifyApp(ctk.CTk):
         btn_area.pack(side="left", fill="y", padx=(20, 0))
 
         for label, key in nav_items:
-            # We use Font Awesome here
             btn = ctk.CTkButton(
                 btn_area, text=label, width=1, height=36, corner_radius=18,
                 fg_color="transparent", text_color=self.th("text"), hover_color=self.th("card"),
@@ -389,25 +370,27 @@ class MigratifyApp(ctk.CTk):
         self.auth_indicator.pack(side="right", padx=24, pady=12)
 
         # ── Global Action Bar (TOP) ────────────────────────────────
-        self.action_bar = ctk.CTkFrame(self, height=72, fg_color=self.th("card"), corner_radius=0, border_width=1, border_color=self.th("border"))
+        self.action_bar = ctk.CTkFrame(self, height=84, fg_color=self.th("card"), corner_radius=0, border_width=1, border_color=self.th("border"))
         self.action_bar.grid(row=1, column=0, sticky="ew")
         
         self.action_inner = ctk.CTkFrame(self.action_bar, fg_color="transparent")
         self.action_inner.pack(fill="x", padx=24, pady=12)
+        self.action_inner.grid_columnconfigure(1, weight=1)
 
         self.action_start_btn = GlowButton(self.action_inner, current_theme=self.theme, text=self.tr("btn_start"), width=160, font=ctk.CTkFont(family=ICON_FONT, size=14, weight="bold"), command=self._start_from_action_bar)
-        self.action_start_btn.pack(side="left")
+        self.action_start_btn.grid(row=0, column=0, sticky="w")
 
         self.action_stop_btn = ctk.CTkButton(self.action_inner, text=self.tr("btn_stop"), width=160, height=44, corner_radius=22, fg_color=self.th("red"), hover_color=self.th("hover"), text_color="white", font=ctk.CTkFont(family=ICON_FONT, size=14, weight="bold"), command=self._stop_migration)
         
         self.prog_area = ctk.CTkFrame(self.action_inner, fg_color="transparent")
-        self.prog_area.pack(side="left", fill="both", expand=True, padx=(16, 0))
+        self.prog_area.grid(row=0, column=1, sticky="nsew", padx=(16, 0))
+        self.prog_area.grid_columnconfigure(0, weight=1)
         
         self.global_prog_label = ctk.CTkLabel(self.prog_area, text="", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("dim"))
-        self.global_prog_label.pack(side="top", anchor="w")
+        self.global_prog_label.grid(row=0, column=0, sticky="w")
         
-        self.global_prog_bar = ctk.CTkProgressBar(self.prog_area, progress_color=self.th("accent"), fg_color=self.th("surface"), height=8, corner_radius=4)
-        self.global_prog_bar.pack(side="bottom", fill="x", pady=(4, 0))
+        self.global_prog_bar = ctk.CTkProgressBar(self.prog_area, progress_color=self.th("accent"), fg_color=self.th("surface"), height=10, corner_radius=5)
+        self.global_prog_bar.grid(row=1, column=0, sticky="ew", pady=(4, 0))
         self.global_prog_bar.set(0)
 
         # ── Main Content Container ───────────────────────────────
@@ -581,22 +564,17 @@ class MigratifyApp(ctk.CTk):
         theme_card.pack(padx=24, pady=8, fill="x")
         ctk.CTkLabel(theme_card, text=self.tr("set_theme"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 8), anchor="w")
         
-        t_vals = [self.tr("theme_coffee"), self.tr("theme_dark"), self.tr("theme_light"), self.tr("theme_asphalt")]
-        t_id_rev = {"coffee": self.tr("theme_coffee"), "dark": self.tr("theme_dark"), "light": self.tr("theme_light"), "asphalt": self.tr("theme_asphalt")}
+        t_vals = [self.tr("theme_coffee"), self.tr("theme_dark"), self.tr("theme_light"), self.tr("theme_asphalt"), self.tr("theme_nebula")]
+        t_id_rev = {"coffee": self.tr("theme_coffee"), "dark": self.tr("theme_dark"), "light": self.tr("theme_light"), "asphalt": self.tr("theme_asphalt"), "nebula": self.tr("theme_nebula")}
         self.theme_var = ctk.StringVar(value=t_id_rev.get(self.theme, self.tr("theme_coffee")))
         
         theme_opt = ctk.CTkOptionMenu(theme_card, variable=self.theme_var, values=t_vals, fg_color=self.th("surface"), button_color=self.th("border"), button_hover_color=self.th("hover"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._apply_theme_setting)
         theme_opt.pack(padx=16, pady=(0, 16), anchor="w")
 
-        # Language Section
-        lang_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
-        lang_card.pack(padx=24, pady=8, fill="x")
-        ctk.CTkLabel(lang_card, text=self.tr("set_lang"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 8), anchor="w")
-        
-        self.lang_var = ctk.StringVar(value="English" if self.lang == "en" else "Русский")
-        lang_opt = ctk.CTkOptionMenu(lang_card, variable=self.lang_var, values=["English", "Русский"], fg_color=self.th("surface"), button_color=self.th("border"), button_hover_color=self.th("hover"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._apply_language)
-        lang_opt.pack(padx=16, pady=(0, 16), anchor="w")
-
+        # Reset Section
+        reset_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
+        reset_card.pack(padx=24, pady=8, fill="x")
+        ctk.CTkLabel(reset_card, text=self.tr("set_reset"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 8), anchor="w")
         # Custom Background
         bg_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
         bg_card.pack(padx=24, pady=8, fill="x")
@@ -773,8 +751,8 @@ class MigratifyApp(ctk.CTk):
 
         self.is_migrating, self.stop_flag = True, False
         
-        self.action_start_btn.pack_forget()
-        self.action_stop_btn.pack(side="left", padx=24, pady=14)
+        self.action_start_btn.grid_forget()
+        self.action_stop_btn.grid(row=0, column=0, sticky="w")
         self.card_total.set_value(len(self.songs))
         
         target_dest = self.dest_var.get()
@@ -796,8 +774,8 @@ class MigratifyApp(ctk.CTk):
     def _stop_migration(self):
         self.stop_flag = True
         self.is_migrating = False
-        self.action_stop_btn.pack_forget()
-        self.action_start_btn.pack(side="left", padx=24, pady=14)
+        self.action_stop_btn.grid_forget()
+        self.action_start_btn.grid(row=0, column=0, sticky="w")
 
     def _worker(self, songs, playlist_id, smart, dry_run, target_box):
         history, progress = load_history(), load_progress()
