@@ -7,11 +7,9 @@ __pycache__/
 
 # Migration Tool Data / Secrets (DO NOT COMMIT)
 liked.csv
+library.csv
 headers.txt
 oauth.json
 progress.json
 failed_songs.csv
 logs.txt
-
-* **Advanced Processing**: Dry-Run mode, track range processing (e.g. `100-500`), and 'Reverse Order' reading.
-* **Logging System**: Automatically creates `logs.txt` for technical debugging and `failed_songs.csv` for manual review of missed tracks.

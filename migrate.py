@@ -1,3 +1,29 @@
+# === Auto-install dependencies ===
+import sys
+import subprocess
+
+REQUIRED = ["ytmusicapi", "colorama"]
+
+def _ensure_deps():
+    import importlib
+    missing = []
+    pkg_map = {"ytmusicapi": "ytmusicapi", "colorama": "colorama"}
+    for pkg in REQUIRED:
+        try:
+            importlib.import_module(pkg)
+        except ImportError:
+            missing.append(pkg_map[pkg])
+    if missing:
+        print(f"[Migratify] Missing packages: {', '.join(missing)}. Installing...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+        print("[Migratify] Done! Restarting...\n")
+        # Re-exec so fresh imports are available
+        import os
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+_ensure_deps()
+# === End auto-install ===
+
 import csv
 import os
 import time
@@ -17,12 +43,10 @@ HEADERS_PATH = os.path.join(BASE_DIR, "headers.txt")
 AUTH_JSON_PATH = os.path.join(BASE_DIR, "oauth.json")
 PROGRESS_PATH = os.path.join(BASE_DIR, "progress.json")
 FAILED_CSV_PATH = os.path.join(BASE_DIR, "failed_songs.csv")
-LOGS_PATH = os.path.join(BASE_DIR, "logs.txt")
+# LOGS_PATH removed
 
 def log_to_file(message):
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with open(LOGS_PATH, "a", encoding="utf-8") as f:
-        f.write(f"[{timestamp}] {message}\n")
+    pass
 
 LOGO = fr"""{Fore.MAGENTA}{Style.BRIGHT}
   __  __ _                 _   _  __       
@@ -48,10 +72,29 @@ LANG_DATA = {
         "ytm_login_err": f"{Fore.RED}❌ Failed to login to YouTube Music: ",
         "menu_source": f"\n{Fore.CYAN}=== SELECT SOURCE ==={Style.RESET_ALL}\n1. Universal CSV (Recommended - Spotify/Apple/SC via Exportify/Soundiiz)\n2. YouTube Music (Direct API)\n3. Spotify (Direct API)\n4. Apple Music (Direct API)\n5. SoundCloud (Direct API)\n> ",
         "menu_target": f"\n{Fore.CYAN}=== SELECT TARGET ==={Style.RESET_ALL}\n1. YouTube Music (Direct API - Fully Working)\n2. Spotify (Direct API)\n3. Apple Music (Direct API)\n4. SoundCloud (Direct API)\n> ",
-        "menu_mode": "\nSelect migration mode:\n1. Migrate full library\n2. Migrate a specific range of tracks\n3. Dry Run (Search without liking)\n> ",
+        "menu_mode": (
+            f"\n{Fore.CYAN}=== SELECT MIGRATION MODE ==={Style.RESET_ALL}\n"
+            "1. Full Library  — migrates every song in the CSV from start to finish\n"
+            "2. Custom Range  — lets you specify a slice, e.g. tracks 100-500 only\n"
+            "3. Dry Run       — searches for tracks WITHOUT liking them (safe test)\n> "
+        ),
         "menu_range": "Enter range (e.g., 100-500): ",
-        "menu_order": "\nSelect processing order:\n1. Default (Top to Bottom)\n2. Reversed (Bottom to Top)\n> ",
-        "menu_smart": "\n* **Smart Search**: Filters search results on YouTube by exact duration matching (within 90 seconds) so it doesn't accidentally pick a \"10-hour loop version\" or a fan-remix.\n1. Yes\n2. No\n> ",
+        "menu_order": (
+            f"\n{Fore.CYAN}=== PROCESSING ORDER ==={Style.RESET_ALL}\n"
+            "This controls in what order songs end up in YouTube Music.\n"
+            "YouTube Music puts the LAST liked song at the TOP of your library.\n"
+            "  1. Top → Bottom  — row 1 of CSV is liked first → ends up at the BOTTOM\n"
+            "  2. Bottom → Top  — last row liked first → row 1 ends up at the TOP\n"
+            "💡 Tip: Choose option 2 if you want the newest songs at the top.\n> "
+        ),
+        "menu_smart": (
+            f"\n{Fore.CYAN}=== SMART SEARCH ==={Style.RESET_ALL}\n"
+            "Smart Search compares the duration of each search result against your CSV data.\n"
+            "This prevents YouTube Music from accidentally picking a 10-hour loop version\n"
+            "or a fan-remix instead of the real song (tolerance: ±90 seconds).\n"
+            "  1. Yes — Enable Smart Search (recommended, requires duration in CSV)\n"
+            "  2. No  — Pick the first result blindly (faster, less accurate)\n> "
+        ),
         "invalid_range": f"{Fore.RED}❌ Invalid range.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ CSV Parsing: Reads any format. Universal and safe.",
@@ -87,10 +130,29 @@ LANG_DATA = {
         "ytm_login_err": f"{Fore.RED}❌ Не удалось авторизоваться в YouTube Music: ",
         "menu_source": f"\n{Fore.CYAN}=== ОТКУДА БЕРЕМ ТРЕКИ ==={Style.RESET_ALL}\n1. Универсальный CSV (Рекомендуется - подходит для Spotify/AppleMusic/SoundCloud)\n2. YouTube Music (Прямой API)\n3. Spotify (Прямой API)\n4. Apple Music (Прямой API)\n5. SoundCloud (Прямой API)\n> ",
         "menu_target": f"\n{Fore.CYAN}=== КУДА ПЕРЕНОСИМ ==={Style.RESET_ALL}\n1. YouTube Music (Прямой API - Работает на 100%)\n2. Spotify (Прямой API)\n3. Apple Music (Прямой API)\n4. SoundCloud (Прямой API)\n> ",
-        "menu_mode": "\nВыберите режим миграции:\n1. Перенести всю библиотеку полностью\n2. Перенести указанный диапазон треков (например, 100-500)\n3. Тестовый режим (Dry Run) — только поиск\n> ",
+        "menu_mode": (
+            f"\n{Fore.CYAN}=== РЕЖИМ МИГРАЦИИ ==={Style.RESET_ALL}\n"
+            "1. Вся библиотека  — переносит все треки из CSV от начала до конца\n"
+            "2. Диапазон        — указываете конкретные номера, например треки 100-500\n"
+            "3. Тестовый режим  — ищет треки БЕЗ простановки лайков (безопасная проверка)\n> "
+        ),
         "menu_range": "Введите диапазон (например, 100-500): ",
-        "menu_order": "\nВыберите порядок загрузки:\n1. Стандартный (Сверху-вниз)\n2. Реверс (Снизу-вверх)\n> ",
-        "menu_smart": "\n* **Умный поиск (Smart Search)**: Скрипт сверяет длительность трека, чтобы алгоритм случайно не добавил 10-часовую версию или фанатский ремикс вместо оригинальной песни (погрешность до 90 секунд).\n1. Да\n2. Нет\n> ",
+        "menu_order": (
+            f"\n{Fore.CYAN}=== ПОРЯДОК ЗАГРУЗКИ ==={Style.RESET_ALL}\n"
+            "Это управляет тем, в каком порядке песни окажутся в YouTube Music.\n"
+            "YouTube Music всегда ставит ПОСЛЕДНИЙ залайканный трек в САМЫЙ ВЕРХ библиотеки.\n"
+            "  1. Сверху-вниз  — первая строка CSV лайкается первой → окажется В САМОМ НИЗУ\n"
+            "  2. Снизу-вверх  — последняя строка лайкается первой → первая строка окажется ВВЕРХУ\n"
+            "💡 Совет: выбирайте вариант 2, если хотите, чтобы ваши самые старые треки были наверху.\n> "
+        ),
+        "menu_smart": (
+            f"\n{Fore.CYAN}=== УМНЫЙ ПОИСК (Smart Search) ==={Style.RESET_ALL}\n"
+            "Умный поиск сверяет длительность трека из CSV с результатами поиска.\n"
+            "Это мешает алгоритму подобрать 10-часовую версию или фанатский ремикс\n"
+            "вместо оригинала. Погрешность — до 90 секунд.\n"
+            "  1. Да  — Включить умный поиск (рекомендуется, нужна длительность в CSV)\n"
+            "  2. Нет — Брать первый попавшийся результат (быстрее, менее точно)\n> "
+        ),
         "invalid_range": f"{Fore.RED}❌ Неверный диапазон.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ Универсальный CSV: Безопасно, читает скачанные базы файлов любого сервиса.",
@@ -271,10 +333,36 @@ def main():
         # Auth Setup
         if not os.path.exists(AUTH_JSON_PATH):
             if not os.path.exists(HEADERS_PATH):
-                print(f"{t['headers_not_found']} {HEADERS_PATH}")
-                print(t['headers_ins'])
-                if input(t['retry_msg']).lower() == 'y': continue
-                else: return
+                # Feature: paste cURL directly into the terminal
+                print(f"\n{Fore.YELLOW}📋 Файл headers.txt не найден.")
+                print(f"{Fore.CYAN}Вы можете вставить cURL прямо сейчас, не создавая файл вручную!")
+                print(f"{Fore.WHITE}Как получить cURL:")
+                print("  1. Откройте music.youtube.com в браузере (убедитесь, что вошли в аккаунт).")
+                print("  2. Нажмите F12 → Network (Сеть).")
+                print("  3. В поле поиска введите 'browse', обновите страницу.")
+                print("  4. Правой кнопкой по запросу 'browse' → Copy → Copy as cURL (bash).")
+                print(f"{Fore.YELLOW}Вставьте cURL ниже и нажмите Enter (или оставьте пустым для отмены):{Style.RESET_ALL}")
+                
+                lines = []
+                try:
+                    while True:
+                        line = input()
+                        if not line and lines:
+                            break
+                        if line:
+                            lines.append(line)
+                except (EOFError, KeyboardInterrupt):
+                    pass
+                
+                if lines:
+                    pasted_curl = "\n".join(lines)
+                    with open(HEADERS_PATH, 'w', encoding='utf-8') as hf:
+                        hf.write(pasted_curl)
+                    print(f"{Fore.GREEN}✅ headers.txt создан автоматически!")
+                else:
+                    print(f"{Fore.RED}❌ Ничего не вставлено.")
+                    if input(t['retry_msg']).lower() == 'y': continue
+                    else: return
             
             print(t['setup_auth'])
             try:
