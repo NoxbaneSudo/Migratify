@@ -288,6 +288,20 @@ def main():
                     else: return
 
                 # Check for critical absence of cookie early
+                # Clean and sanitize cURL format for ytmusicapi compatibility
+                if low_content.startswith("curl"):
+                    import re
+                    # Convert -b 'cookies' to -H 'cookie: cookies'
+                    raw_content = re.sub(r" -b '([^']+)'", r" -H 'cookie: \1'", raw_content)
+                    raw_content = re.sub(r' -b "([^"]+)"', r' -H "cookie: \1"', raw_content)
+                    
+                    # Remove --data / --data-raw blocks to prevent binary parsing crashes
+                    raw_content = re.sub(r" --data-raw.*", "", raw_content, flags=re.DOTALL)
+                    raw_content = re.sub(r" --data.*", "", raw_content, flags=re.DOTALL)
+                    
+                    low_content = raw_content.lower()
+
+                # Check for critical absence of cookie early
                 if "cookie" not in low_content:
                     print(f"\n{Fore.RED}❌ ОШИБКА: Заголовок 'cookie' не найден в {HEADERS_PATH}!")
                     safe_print = raw_content[:80].replace('\n', ' ')
@@ -304,6 +318,7 @@ def main():
                         raw_content += " -H 'x-goog-authuser: 0'"
                     else:
                         raw_content += "\nx-goog-authuser: 0"
+
                 
                 # Try to setup
                 setup_browser(AUTH_JSON_PATH, raw_content)
