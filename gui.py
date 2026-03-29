@@ -967,8 +967,9 @@ class MigratifyApp(ctk.CTk):
                 self._safe_update(
                     lambda: self._log(f"✅ Created playlist: {name}"))
             except Exception as e:
+                err_msg = str(e)
                 self._safe_update(
-                    lambda: self._log(f"❌ Failed to create playlist: {e}"))
+                    lambda: self._log(f"❌ Failed to create playlist: {err_msg}"))
                 self._migration_done()
                 return
         elif dest == "existing" and not is_dry_run:
@@ -985,8 +986,9 @@ class MigratifyApp(ctk.CTk):
                         lambda: self._log(
                             f"❌ Playlist '{name}' not found. Using Liked."))
             except Exception as e:
+                err_msg = str(e)
                 self._safe_update(
-                    lambda: self._log(f"⚠️ Could not list playlists: {e}"))
+                    lambda: self._log(f"⚠️ Could not list playlists: {err_msg}"))
 
         history_set = load_history()
         progress = load_progress()
@@ -1140,8 +1142,9 @@ class MigratifyApp(ctk.CTk):
                 pl_id = self.ytm.create_playlist(
                     pl_name, "Migrated via Migratify")
             except Exception as e:
+                err_msg = str(e)
                 self._safe_update(
-                    lambda: self._batch_log_msg(f"❌ Create playlist failed: {e}"))
+                    lambda: self._batch_log_msg(f"❌ Create playlist failed: {err_msg}"))
                 continue
 
             time.sleep(1)
