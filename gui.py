@@ -59,7 +59,7 @@ ctk.set_default_color_theme("green")
 BRAND_ACCENT = "#F4C9D6"     # Peony
 BRAND_HOVER = "#DCC2C5"      # Mocha Latte
 BRAND_DARK = "#281914"       # Deep background
-BRAND_SURFACE = "#352202"    # Lilac Dusk (Sidebar)
+BRAND_SURFACE = "#200F07"    # Dark Sidebar
 BRAND_CARD = "#3E2723"       # Espresso (Cards)
 BRAND_BORDER = "#5C3A21"     # Lighter brown borders
 BRAND_TEXT = "#FFF0F5"       # Warm white text
@@ -71,7 +71,7 @@ BRAND_CYAN = "#A2D2FF"
 # Alias to avoid breaking existing widget references
 BRAND_GREEN = BRAND_ACCENT 
 
-FONT_FAMILY = "Segoe UI"
+FONT_FAMILY = "Poppins"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -333,10 +333,10 @@ class MigratifyApp(ctk.CTk):
         self.nav_buttons = {}
         nav_items = [
             ("🏠  Dashboard", "dashboard"),
-            ("🚀  Migrate", "migrate"),
-            ("📂  Batch Mode", "batch"),
-            ("🛠  Fix Errors", "fix"),
-            ("⚙️  Settings", "settings"),
+            ("Migrate", "migrate"),
+            ("Batch Mode", "batch"),
+            ("Fix Errors", "fix"),
+            ("⚙Settings", "settings"),
         ]
         for i, (label, key) in enumerate(nav_items):
             btn = ctk.CTkButton(
@@ -351,7 +351,7 @@ class MigratifyApp(ctk.CTk):
 
         # Auth indicator at bottom
         self.auth_indicator = ctk.CTkLabel(
-            sidebar, text="● Disconnected",
+            sidebar, text=" Disconnected",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=BRAND_RED
         )
@@ -448,7 +448,7 @@ class MigratifyApp(ctk.CTk):
         csv_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
-            csv_card, text="📄 CSV File",
+            csv_card, text=" CSV File",
             font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             text_color=BRAND_TEXT
         ).pack(padx=16, pady=(12, 4), anchor="w")
@@ -476,7 +476,7 @@ class MigratifyApp(ctk.CTk):
         opts_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
-            opts_card, text="⚙️ Options",
+            opts_card, text="⚙ Options",
             font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             text_color=BRAND_TEXT
         ).pack(padx=16, pady=(12, 8), anchor="w")
@@ -582,7 +582,7 @@ class MigratifyApp(ctk.CTk):
         btn_row.pack(padx=24, pady=16, fill="x")
 
         self.start_btn = GlowButton(
-            btn_row, text="▶  START MIGRATION", width=200,
+            btn_row, text="START MIGRATION", width=200,
             command=self._start_migration
         )
         self.start_btn.pack(side="left")
@@ -619,7 +619,7 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkLabel(
             info_card,
-            text="📂 How it works:\n\n"
+            text=" How it works:\n\n"
                  "1. Click 'Open Folder' to create & open the csv_batch folder\n"
                  "2. Drag your CSV files into it (e.g. Rock.csv, Indie.csv)\n"
                  "3. Come back here and click 'Start Batch'\n"
@@ -640,7 +640,7 @@ class MigratifyApp(ctk.CTk):
         btn_row.grid(row=3, column=0, padx=24, pady=8, sticky="we")
 
         ctk.CTkButton(
-            btn_row, text="📁  Open Folder", width=160, height=40,
+            btn_row, text="Open Folder", width=160, height=40,
             corner_radius=16, fg_color=BRAND_BORDER,
             hover_color=BRAND_CARD, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=13),
@@ -648,7 +648,7 @@ class MigratifyApp(ctk.CTk):
         ).pack(side="left")
 
         self.batch_start_btn = GlowButton(
-            btn_row, text="▶  Start Batch", width=160,
+            btn_row, text="Start Batch", width=160,
             command=self._start_batch
         )
         self.batch_start_btn.pack(side="left", padx=8)
@@ -700,7 +700,7 @@ class MigratifyApp(ctk.CTk):
         ).grid(row=1, column=0, padx=24, pady=(0, 16), sticky="w")
 
         GlowButton(
-            page, text="🔄  Load Failed Songs", width=220,
+            page, text="Load Failed Songs", width=220,
             command=self._load_failed_songs
         ).grid(row=2, column=0, padx=24, pady=8, sticky="w")
 
@@ -733,7 +733,7 @@ class MigratifyApp(ctk.CTk):
         auth_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
-            auth_card, text="🔑 YouTube Music Auth (cURL)",
+            auth_card, text=" YouTube Music Auth (cURL)",
             font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             text_color=BRAND_TEXT
         ).pack(padx=16, pady=(12, 4), anchor="w")
@@ -759,7 +759,7 @@ class MigratifyApp(ctk.CTk):
         btn_row.pack(padx=16, pady=(0, 12), fill="x")
 
         GlowButton(
-            btn_row, text="🔗  Authenticate", width=180,
+            btn_row, text="Authenticate", width=180,
             command=self._authenticate
         ).pack(side="left")
 
@@ -775,7 +775,7 @@ class MigratifyApp(ctk.CTk):
         reset_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
-            reset_card, text="🗑️ Reset",
+            reset_card, text=" Reset",
             font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             text_color=BRAND_TEXT
         ).pack(padx=16, pady=(12, 8), anchor="w")
@@ -857,8 +857,8 @@ class MigratifyApp(ctk.CTk):
             try:
                 self.ytm = YTMusic(AUTH_JSON_PATH)
                 self.auth_indicator.configure(
-                    text="● Connected", text_color=BRAND_GREEN)
-                self._log("✅ YouTube Music authenticated.")
+                    text=" Connected", text_color=BRAND_GREEN)
+                self._log(" YouTube Music authenticated.")
 
                 # Auto-load default CSV if exists
                 for p in [CSV_PATH, os.path.join(BASE_DIR, "liked.csv")]:
@@ -871,7 +871,7 @@ class MigratifyApp(ctk.CTk):
                             text_color=BRAND_GREEN
                         )
                         self.card_total.set_value(str(len(songs)))
-                        self._log(f"📄 Auto-loaded {os.path.basename(p)} "
+                        self._log(f" Auto-loaded {os.path.basename(p)} "
                                   f"({len(songs)} tracks)")
                         break
 
@@ -881,11 +881,11 @@ class MigratifyApp(ctk.CTk):
                 self.card_failed.set_value(str(prog["failed_rows"]))
                 return
             except Exception as e:
-                self._log(f"⚠️ Auth file exists but login failed: {e}")
+                self._log(f" Auth file exists but login failed: {e}")
 
         self.auth_indicator.configure(
-            text="● Disconnected", text_color=BRAND_RED)
-        self._log("⚠️ Not authenticated. Go to Settings → paste cURL.")
+            text=" Disconnected", text_color=BRAND_RED)
+        self._log(" Not authenticated. Go to Settings → paste cURL.")
 
     def _authenticate(self):
         raw_curl = self.curl_textbox.get("1.0", "end").strip()
@@ -897,7 +897,7 @@ class MigratifyApp(ctk.CTk):
         parsed, error = parse_curl(raw_curl)
         if error:
             self.auth_status_label.configure(
-                text=f"❌ {error}", text_color=BRAND_RED)
+                text=f" {error}", text_color=BRAND_RED)
             return
 
         try:
@@ -912,14 +912,14 @@ class MigratifyApp(ctk.CTk):
             self.ytm = YTMusic(AUTH_JSON_PATH)
 
             self.auth_status_label.configure(
-                text="✅ Authenticated!", text_color=BRAND_GREEN)
+                text=" Authenticated!", text_color=BRAND_GREEN)
             self.auth_indicator.configure(
-                text="● Connected", text_color=BRAND_GREEN)
-            self._log("✅ Successfully authenticated with YouTube Music!")
+                text=" Connected", text_color=BRAND_GREEN)
+            self._log(" Successfully authenticated with YouTube Music!")
         except Exception as e:
             self.auth_status_label.configure(
-                text=f"❌ {e}", text_color=BRAND_RED)
-            self._log(f"❌ Auth failed: {e}")
+                text=f" {e}", text_color=BRAND_RED)
+            self._log(f" Auth failed: {e}")
 
     # ── CSV ───────────────────────────────────────────────────────
 
@@ -936,7 +936,7 @@ class MigratifyApp(ctk.CTk):
             self.csv_label.configure(
                 text=os.path.basename(path), text_color=BRAND_GREEN)
             self.card_total.set_value(str(len(songs)))
-            self._log(f"📄 Loaded {os.path.basename(path)} "
+            self._log(f" Loaded {os.path.basename(path)} "
                       f"({len(songs)} tracks)")
 
     # ── Migration ─────────────────────────────────────────────────
@@ -957,14 +957,14 @@ class MigratifyApp(ctk.CTk):
         self.stop_flag = False
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
-        self._log("🚀 Migration started!")
+        self._log(" Migration started!")
 
         thread = threading.Thread(target=self._migration_worker, daemon=True)
         thread.start()
 
     def _stop_migration(self):
         self.stop_flag = True
-        self._log("🛑 Stop requested...")
+        self._log(" Stop requested...")
 
     def _migration_worker(self):
         songs = list(self.songs)
@@ -983,11 +983,11 @@ class MigratifyApp(ctk.CTk):
                 target_playlist_id = self.ytm.create_playlist(
                     name, "Migrated via Migratify")
                 self._safe_update(
-                    lambda: self._log(f"✅ Created playlist: {name}"))
+                    lambda: self._log(f" Created playlist: {name}"))
             except Exception as e:
                 err_msg = str(e)
                 self._safe_update(
-                    lambda: self._log(f"❌ Failed to create playlist: {err_msg}"))
+                    lambda: self._log(f" Failed to create playlist: {err_msg}"))
                 self._migration_done()
                 return
         elif dest == "existing" and not is_dry_run:
@@ -1002,11 +1002,11 @@ class MigratifyApp(ctk.CTk):
                 else:
                     self._safe_update(
                         lambda: self._log(
-                            f"❌ Playlist '{name}' not found. Using Liked."))
+                            f" Playlist '{name}' not found. Using Liked."))
             except Exception as e:
                 err_msg = str(e)
                 self._safe_update(
-                    lambda: self._log(f"⚠️ Could not list playlists: {err_msg}"))
+                    lambda: self._log(f" Could not list playlists: {err_msg}"))
 
         history_set = load_history()
         progress = load_progress()
@@ -1014,7 +1014,7 @@ class MigratifyApp(ctk.CTk):
         total = len(songs)
 
         if start >= total:
-            self._safe_update(lambda: self._log("✅ Already completed!"))
+            self._safe_update(lambda: self._log(" Already completed!"))
             self._migration_done()
             return
 
@@ -1072,7 +1072,7 @@ class MigratifyApp(ctk.CTk):
                 if "401" in err or "Unauthorized" in err:
                     self._safe_update(
                         lambda: self._log(
-                            "⚠️ SESSION EXPIRED! Re-authenticate in Settings."))
+                            " SESSION EXPIRED! Re-authenticate in Settings."))
                     break
                 failed += 1
                 log_failed_song(i + 1, query, err)
@@ -1093,7 +1093,7 @@ class MigratifyApp(ctk.CTk):
         save_history(history_set)
 
         self._safe_update(lambda: self._log(
-            f"📊 Done! Migrated: {migrated} | Failed: {failed} | "
+            f" Done! Migrated: {migrated} | Failed: {failed} | "
             f"Total: {total}"))
         self._migration_done()
 
@@ -1120,7 +1120,7 @@ class MigratifyApp(ctk.CTk):
             subprocess.Popen(["open", BATCH_DIR])
         else:
             subprocess.Popen(["xdg-open", BATCH_DIR])
-        self._batch_log_msg(f"📂 Opened folder: {BATCH_DIR}")
+        self._batch_log_msg(f" Opened folder: {BATCH_DIR}")
 
     def _start_batch(self):
         if not self.ytm:
@@ -1154,7 +1154,7 @@ class MigratifyApp(ctk.CTk):
 
             self._safe_update(
                 lambda n=pl_name, c=len(songs): self._batch_log_msg(
-                    f"📁 [{file_idx+1}/{len(csvs)}] {n} — {c} tracks"))
+                    f" [{file_idx+1}/{len(csvs)}] {n} — {c} tracks"))
 
             try:
                 pl_id = self.ytm.create_playlist(
@@ -1162,7 +1162,7 @@ class MigratifyApp(ctk.CTk):
             except Exception as e:
                 err_msg = str(e)
                 self._safe_update(
-                    lambda: self._batch_log_msg(f"❌ Create playlist failed: {err_msg}"))
+                    lambda: self._batch_log_msg(f" Create playlist failed: {err_msg}"))
                 continue
 
             time.sleep(1)
@@ -1210,7 +1210,7 @@ class MigratifyApp(ctk.CTk):
 
             save_history(history_set)
             self._safe_update(
-                lambda n=pl_name: self._batch_log_msg(f"✅ {n} — done!"))
+                lambda n=pl_name: self._batch_log_msg(f" {n} — done!"))
 
         self._safe_update(
             lambda: self._batch_log_msg("🎉 Batch migration complete!"))
@@ -1227,7 +1227,7 @@ class MigratifyApp(ctk.CTk):
         if not os.path.exists(FAILED_CSV_PATH):
             ctk.CTkLabel(
                 self.fix_scroll,
-                text="✅ No failed songs! Nothing to fix.",
+                text=" No failed songs! Nothing to fix.",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=14),
                 text_color=BRAND_GREEN
             ).pack(padx=16, pady=24)
@@ -1249,13 +1249,13 @@ class MigratifyApp(ctk.CTk):
         if not failed:
             ctk.CTkLabel(
                 self.fix_scroll,
-                text="✅ No failed songs!",
+                text=" No failed songs!",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=14),
                 text_color=BRAND_GREEN
             ).pack(padx=16, pady=24)
             return
 
-        self._log(f"🛠 Loading {len(failed)} failed songs for fixing...")
+        self._log(f" Loading {len(failed)} failed songs for fixing...")
 
         # Load them in a thread to not block UI
         thread = threading.Thread(
@@ -1283,7 +1283,7 @@ class MigratifyApp(ctk.CTk):
         header.pack(padx=12, pady=(10, 4), fill="x")
 
         ctk.CTkLabel(
-            header, text=f"🔎 {query}",
+            header, text=f" {query}",
             font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
             text_color=BRAND_TEXT
         ).pack(side="left")
@@ -1324,7 +1324,7 @@ class MigratifyApp(ctk.CTk):
             ).pack(side="left", padx=10, pady=6)
 
             ctk.CTkButton(
-                row, text="✅ Pick", width=70, height=28,
+                row, text=" Pick", width=70, height=28,
                 corner_radius=6, fg_color=BRAND_GREEN,
                 text_color=BRAND_DARK,
                 font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
@@ -1344,16 +1344,16 @@ class MigratifyApp(ctk.CTk):
             for w in card.winfo_children():
                 w.destroy()
             ctk.CTkLabel(
-                card, text=f"✅ Fixed: {query}",
+                card, text=f" Fixed: {query}",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=13),
                 text_color=BRAND_GREEN
             ).pack(padx=12, pady=10)
-            self._log(f"✅ Fixed: {query}")
+            self._log(f" Fixed: {query}")
 
             # Remove from failed CSV
             self._remove_from_failed(query)
         except Exception as e:
-            self._log(f"❌ Fix failed for {query}: {e}")
+            self._log(f" Fix failed for {query}: {e}")
 
     def _remove_from_failed(self, query):
         if not os.path.exists(FAILED_CSV_PATH):
@@ -1384,7 +1384,7 @@ class MigratifyApp(ctk.CTk):
             self.card_migrated.set_value("0")
             self.card_failed.set_value("0")
             self.progress_bar.set(0)
-            self._log("🗑️ Progress reset.")
+            self._log(" Progress reset.")
 
     def _reset_auth(self):
         if messagebox.askyesno("Reset Auth",
@@ -1394,15 +1394,15 @@ class MigratifyApp(ctk.CTk):
                     os.remove(p)
             self.ytm = None
             self.auth_indicator.configure(
-                text="● Disconnected", text_color=BRAND_RED)
-            self._log("🗑️ Auth reset. Paste new cURL in Settings.")
+                text=" Disconnected", text_color=BRAND_RED)
+            self._log(" Auth reset. Paste new cURL in Settings.")
 
     def _reset_history(self):
         if messagebox.askyesno("Reset History",
                                "This will allow re-adding duplicate songs."):
             if os.path.exists(HISTORY_PATH):
                 os.remove(HISTORY_PATH)
-            self._log("🗑️ Duplicate history cleared.")
+            self._log(" Duplicate history cleared.")
 
     # ── Thread-safe UI updates ────────────────────────────────────
 
