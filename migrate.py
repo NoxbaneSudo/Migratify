@@ -2,7 +2,7 @@
 import sys
 import subprocess
 
-REQUIRED = ["ytmusicapi", "colorama"]
+REQUIRED = ["ytmusicapi", "colorama", "tqdm"]
 
 def _ensure_deps():
     import importlib
@@ -32,6 +32,7 @@ import re
 from ytmusicapi import YTMusic
 from ytmusicapi.setup import setup_browser
 from colorama import init, Fore, Style
+from tqdm import tqdm
 
 # Initialize colorama
 init(autoreset=True)
@@ -48,7 +49,7 @@ FAILED_CSV_PATH = os.path.join(BASE_DIR, "failed_songs.csv")
 def log_to_file(message):
     pass
 
-LOGO = fr"""{Fore.MAGENTA}{Style.BRIGHT}
+LOGO = fr"""{Fore.GREEN}{Style.BRIGHT}
   __  __ _                 _   _  __       
  |  \/  (_)               | | (_)/ _|      
  | \  / |_  __ _ _ __ __ _| |_ _| |_ _   _ 
@@ -57,8 +58,23 @@ LOGO = fr"""{Fore.MAGENTA}{Style.BRIGHT}
  |_|  |_|_|\__, |_|  \__,_|\__|_|_|  \__, |
             __/ |                     __/ |
            |___/                     |___/ 
-{Fore.CYAN}       By Noxbane      {Style.RESET_ALL}
+{Fore.GREEN}       By NoxbaneSudo  {Style.RESET_ALL}
 """
+
+def get_language():
+    # Animated logo
+    os.system('cls' if os.name == 'nt' else 'clear')
+    for line in LOGO.split("\n"):
+        for char in line:
+            print(char, end='', flush=True)
+            time.sleep(0.002)
+        print()
+    
+    print("\nChoose your language / Выберите язык:")
+    print("1. English")
+    print("2. Русский")
+    choice = input("> ").strip()
+    return 'ru' if choice == '2' else 'en'
 
 LANG_DATA = {
     "en": {
@@ -95,6 +111,21 @@ LANG_DATA = {
             "  1. Yes — Enable Smart Search (recommended, requires duration in CSV)\n"
             "  2. No  — Pick the first result blindly (faster, less accurate)\n> "
         ),
+        "menu_dest": (
+            f"\n{Fore.CYAN}=== SELECT DESTINATION TYPE ==={Style.RESET_ALL}\n"
+            "  1. Liked Songs (Default)\n"
+            "  2. Specific Playlist\n> "
+        ),
+        "menu_playlist": (
+            f"\n{Fore.CYAN}=== PLAYLIST OPTIONS ==={Style.RESET_ALL}\n"
+            "  1. Create New Playlist\n"
+            "  2. Use Existing Playlist\n> "
+        ),
+        "pl_title": "Enter new playlist title: ",
+        "pl_desc": "Enter playlist description (optional): ",
+        "pl_search": "Searching for your playlists...",
+        "pl_select": "Enter the number of the playlist: ",
+        "pl_created": f"{Fore.GREEN}✅ Playlist created: ",
         "invalid_range": f"{Fore.RED}❌ Invalid range.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ CSV Parsing: Reads any format. Universal and safe.",
@@ -153,6 +184,21 @@ LANG_DATA = {
             "  1. Да  — Включить умный поиск (рекомендуется, нужна длительность в CSV)\n"
             "  2. Нет — Брать первый попавшийся результат (быстрее, менее точно)\n> "
         ),
+        "menu_dest": (
+            f"\n{Fore.CYAN}=== КУДА ДОБАВЛЯЕМ ТРЕКИ? ==={Style.RESET_ALL}\n"
+            "  1. В любимые (Лайки)\n"
+            "  2. В конкретный плейлист\n> "
+        ),
+        "menu_playlist": (
+            f"\n{Fore.CYAN}=== НАСТРОЙКИ ПЛЕЙЛИСТА ==={Style.RESET_ALL}\n"
+            "  1. Создать новый плейлист\n"
+            "  2. Выбрать из существующих\n> "
+        ),
+        "pl_title": "Введите название нового плейлиста: ",
+        "pl_desc": "Введите описание (можно пустое): ",
+        "pl_search": "Ищу ваши плейлисты...",
+        "pl_select": "Введите номер плейлиста из списка: ",
+        "pl_created": f"{Fore.GREEN}✅ Плейлист создан: ",
         "invalid_range": f"{Fore.RED}❌ Неверный диапазон.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ Универсальный CSV: Безопасно, читает скачанные базы файлов любого сервиса.",
@@ -482,6 +528,25 @@ def main():
     log_to_file(f"Smart Search input: {smart_input}")
     is_smart = (smart_input == "1")
 
+    # Playlist Selection
+    target_playlist_id = None
+    if not is_dry_run:
+        dest_choice = input(t['menu_dest']).strip()
+        if dest_choice == "2":
+            pl_choice = input(t['menu_playlist']).strip()
+            if pl_choice == "1":
+                title = input(t['pl_title']).strip() or "Migratify Playlist"
+                desc = input(t['pl_desc']).strip() or "Migrated via Migratify"
+                target_playlist_id = ytm.create_playlist(title, desc)
+                print(f"{t['pl_created']} {title}")
+            else:
+                print(t['pl_search'])
+                playlists = ytm.get_library_playlists(limit=50)
+                for i, pl in enumerate(playlists):
+                    print(f"{i+1}. {pl['title']} ({pl['itemCount']} tracks)")
+                p_idx = int(input(t['pl_select']).strip()) - 1
+                target_playlist_id = playlists[p_idx]['playlistId']
+
     # Progress load
     progress = load_progress()
     total = end_idx - start_idx
@@ -507,7 +572,8 @@ def main():
     current_index = start_idx
 
     try:
-        for offset, song_data in enumerate(songs_to_process):
+        pbar = tqdm(songs_to_process, desc="Migrating", unit="song")
+        for offset, song_data in enumerate(pbar):
             current_index = start_idx + offset
             
             artist_name = song_data["artist"]
@@ -536,39 +602,42 @@ def main():
                         
                 if matched_video_id:
                     if not is_dry_run:
-                        ytm.rate_song(matched_video_id, 'LIKE')
+                        if target_playlist_id:
+                            ytm.add_playlist_items(target_playlist_id, [matched_video_id])
+                        else:
+                            ytm.rate_song(matched_video_id, 'LIKE')
                     
                     progress["migrated_count"] += 1
-                    status_text = f"{Fore.GREEN}✅ {'Smart OK' if is_smart else 'OK'}" if not is_dry_run else f"{Fore.GREEN}✅ Found"
-                    log_to_file(f"SUCCESS: [{current_index + 1}] {query} -> Found Video ID: {matched_video_id}")
+                    status_text = f"{Fore.GREEN}OK" if not is_dry_run else f"{Fore.GREEN}Found"
+                    # log_to_file(f"SUCCESS: [{current_index + 1}] {query} -> Found Video ID: {matched_video_id}")
                 else:
                     progress["failed_rows"] += 1
-                    status_text = f"{Fore.RED}❌ Not found"
-                    log_to_file(f"FAILURE: [{current_index + 1}] {query} -> Not found on YT Music.")
+                    status_text = f"{Fore.RED}FAIL"
+                    # log_to_file(f"FAILURE: [{current_index + 1}] {query} -> Not found on YT Music.")
                     log_failed_song(current_index + 1, query, "Not found in search")
             except Exception as e:
                 error_msg = str(e)
                 if "401" in error_msg or "Unauthorized" in error_msg:
+                    pbar.close()
                     print(t['session_expired'].format(current_index + 1))
                     print(t['session_ins'])
-                    log_to_file(f"CRITICAL ERROR: Session expired at index {current_index + 1}. Error: {error_msg}")
                     break
                 
                 progress["failed_rows"] += 1
-                status_text = f"{Fore.YELLOW}⚠️ Error: {str(e)[:20]}"
-                log_to_file(f"ERROR: [{current_index + 1}] {query} -> Exception: {error_msg}")
+                status_text = f"{Fore.YELLOW}ERR"
                 log_failed_song(current_index + 1, query, error_msg)
 
             progress["processed_rows"] = current_index + 1
-
+            
+            # Simple clean output for tqdm
+            pbar.set_postfix_str(f"{status_text} | {track_name[:20]}")
+            
             if offset % 10 == 0 or offset == len(songs_to_process) - 1:
-                print(f"[{current_index + 1}/{end_idx}] | {status_text}{Style.RESET_ALL} | {query[:45]}")
                 if not is_dry_run and not custom_range:
                     save_progress(progress)
                 
                 if not is_dry_run:
-                    time.sleep(0.5)
-                
+                    time.sleep(0.3)
     except KeyboardInterrupt:
         print(t['user_stop'])
     finally:
