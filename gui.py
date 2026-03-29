@@ -1,14 +1,13 @@
 """
-Migratify GUI — Modern Desktop Interface
-Built with CustomTkinter for a premium dark-theme experience.
-All migration logic reused from migrate.py core functions.
+Migratify GUI — Pro Max Edition
+Built with CustomTkinter, FontAwesome Vector Icons, and Pillow Graphics Engine.
 """
 
-# === Auto-install GUI dependencies ===
 import sys
 import subprocess
+import os
 
-GUI_DEPS = ["customtkinter", "ytmusicapi", "colorama", "tqdm"]
+GUI_DEPS = ["customtkinter", "ytmusicapi", "colorama", "tqdm", "Pillow", "requests"]
 
 def _ensure_gui_deps():
     import importlib
@@ -26,9 +25,7 @@ def _ensure_gui_deps():
         )
 
 _ensure_gui_deps()
-# === End auto-install ===
 
-import os
 import re
 import csv
 import json
@@ -36,13 +33,19 @@ import time
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import urllib.request
 
+import requests
+from PIL import Image, ImageTk, ImageFilter, ImageDraw
 import customtkinter as ctk
 from ytmusicapi import YTMusic
 from ytmusicapi.setup import setup_browser
 
 # ─── Paths ────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+os.makedirs(ASSETS_DIR, exist_ok=True)
+
 CSV_PATH = os.path.join(BASE_DIR, "library.csv")
 HEADERS_PATH = os.path.join(BASE_DIR, "headers.txt")
 AUTH_JSON_PATH = os.path.join(BASE_DIR, "oauth.json")
@@ -50,275 +53,82 @@ PROGRESS_PATH = os.path.join(BASE_DIR, "progress.json")
 HISTORY_PATH = os.path.join(BASE_DIR, "history.json")
 FAILED_CSV_PATH = os.path.join(BASE_DIR, "failed_songs.csv")
 BATCH_DIR = os.path.join(BASE_DIR, "csv_batch")
+SETTINGS_PATH = os.path.join(BASE_DIR, "settings.json")
+FONT_PATH = os.path.join(ASSETS_DIR, "fa-solid.ttf")
 
-# ─── Theme ────────────────────────────────────────────────────────
+# ─── Fonts & Icons ────────────────────────────────────────────────
+FA_URL = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.ttf"
+if not os.path.exists(FONT_PATH):
+    print("[Migratify GUI] Downloading vector icons...")
+    try:
+        urllib.request.urlretrieve(FA_URL, FONT_PATH)
+    except Exception as e:
+        print(f"Failed to download font: {e}")
+
+if os.path.exists(FONT_PATH):
+    ctk.FontManager.load_font(FONT_PATH)
+
+ICON_HOME = "\uf015"
+ICON_ROCKET = "\uf135"
+ICON_BOXES = "\uf492"
+ICON_WRENCH = "\uf0ad"
+ICON_GEAR = "\uf013"
+ICON_PLAY = "\uf04b"
+ICON_STOP = "\uf04d"
+ICON_MOON = "\uf186"
+ICON_FILE = "\uf15c"
+
+FONT_FAMILY = "Poppins"
+ICON_FONT = "Font Awesome 6 Free Solid"
+
+# ─── App Constants ────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 
-# Migratify brand palette
-BRAND_ACCENT = "#F4C9D6"     # Peony
-BRAND_HOVER = "#DCC2C5"      # Mocha Latte
-BRAND_DARK = "#281914"       # Deep background
-BRAND_SURFACE = "#200F07"    # Dark Sidebar
-BRAND_CARD = "#3E2723"       # Espresso (Cards)
-BRAND_BORDER = "#5C3A21"     # Lighter brown borders
-BRAND_TEXT = "#FFF0F5"       # Warm white text
-BRAND_DIM = "#DCC2C5"        # Mocha Latte for dim text
-BRAND_RED = "#FF6B6B"
-BRAND_YELLOW = "#E9C46A"
-BRAND_CYAN = "#A2D2FF"
-
-# Alias to avoid breaking existing widget references
-BRAND_GREEN = BRAND_ACCENT 
-
-FONT_FAMILY = "Poppins"
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  CORE LOGIC (shared with migrate.py)
-# ═══════════════════════════════════════════════════════════════════
-
-def load_headers(filepath):
-    for enc in ['utf-8', 'utf-16', 'utf-8-sig', 'cp1251']:
-        try:
-            with open(filepath, 'r', encoding=enc) as f:
-                content = f.read().strip()
-                if content:
-                    return content
-        except Exception:
-            pass
-    try:
-        with open(filepath, 'rb') as f:
-            return f.read().decode('utf-8', errors='ignore').strip()
-    except Exception:
-        return ""
-
-
-def get_duration_sec(duration_str):
-    if not duration_str:
-        return None
-    try:
-        parts = str(duration_str).split(':')
-        if len(parts) == 2:
-            return int(parts[0]) * 60 + int(parts[1])
-        elif len(parts) == 3:
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-    except Exception:
-        pass
-    return None
-
-
-def universal_csv_parser(filepath):
-    songs = []
-    try:
-        with open(filepath, mode='r', encoding='utf-8', errors='replace') as f:
-            reader = csv.DictReader(f)
-            if not reader.fieldnames:
-                return songs
-            track_col = next(
-                (k for k in reader.fieldnames
-                 if k.lower() in ['track name', 'title', 'song', 'name', 'track']),
-                None
-            )
-            artist_col = next(
-                (k for k in reader.fieldnames
-                 if k.lower() in [
-                     'artist name(s)', 'artist', 'creator',
-                     'artist name', 'artists'
-                 ]),
-                None
-            )
-            dur_col = next(
-                (k for k in reader.fieldnames
-                 if k.lower() in [
-                     'track duration (ms)', 'duration',
-                     'length', 'time (ms)', 'time'
-                 ]),
-                None
-            )
-            if not track_col and not artist_col:
-                track_col = (reader.fieldnames[0]
-                             if len(reader.fieldnames) > 0 else None)
-                artist_col = (reader.fieldnames[1]
-                              if len(reader.fieldnames) > 1 else None)
-            for row in reader:
-                track = row.get(track_col, "").strip() if track_col else ""
-                artist = row.get(artist_col, "").strip() if artist_col else ""
-                duration = row.get(dur_col, "") if dur_col else ""
-                if track or artist:
-                    target_sec = None
-                    if str(duration).isdigit():
-                        target_sec = int(duration) // 1000
-                    elif ":" in str(duration):
-                        target_sec = get_duration_sec(duration)
-                    songs.append({
-                        "track": track,
-                        "artist": artist,
-                        "target_sec": target_sec
-                    })
-    except Exception:
-        pass
-    return songs
-
-
-def load_history():
-    if os.path.exists(HISTORY_PATH):
-        try:
-            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-                return set(json.load(f))
-        except Exception:
-            pass
-    return set()
-
-
-def save_history(history_set):
-    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(list(history_set), f)
-
-
-def load_progress():
-    if os.path.exists(PROGRESS_PATH):
-        try:
-            with open(PROGRESS_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"migrated_count": 0, "processed_rows": 0, "failed_rows": 0}
-
-
-def save_progress(progress):
-    with open(PROGRESS_PATH, 'w', encoding='utf-8') as f:
-        json.dump(progress, f, indent=4)
-
-
-def log_failed_song(idx, query, reason):
-    file_exists = os.path.isfile(FAILED_CSV_PATH)
-    with open(FAILED_CSV_PATH, 'a', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(['Track Index', 'Query', 'Reason'])
-        writer.writerow([idx, query, reason])
-
-
-def parse_curl(raw_content):
-    """Parse cURL command into raw header lines for ytmusicapi."""
-    low = raw_content.lower()
-    if low.startswith("http"):
-        return None, "You pasted a URL, not a cURL command."
-
-    if low.startswith("curl"):
-        lines = []
-        header_matches = re.findall(r"-H '([^']+)'", raw_content)
-        header_matches += re.findall(r'-H "([^"]+)"', raw_content)
-        for h in header_matches:
-            lines.append(h)
-        cookie_matches = re.findall(r"-b '([^']+)'", raw_content)
-        cookie_matches += re.findall(r'-b "([^"]+)"', raw_content)
-        for c in cookie_matches:
-            lines.append(f"cookie: {c}")
-        if not lines:
-            return None, "No headers found in cURL."
-        raw_content = "\n".join(lines)
-
-    low = raw_content.lower()
-    if "cookie" not in low:
-        return None, "Cookie header is missing."
-
-    if "x-goog-authuser" not in low:
-        raw_content += "\nx-goog-authuser: 0"
-
-    return raw_content, None
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  WIDGETS
-# ═══════════════════════════════════════════════════════════════════
-
-class GlowButton(ctk.CTkButton):
-    """A button with a smooth hover effect & rounded edges."""
-
-    def __init__(self, master, **kwargs):
-        kwargs.setdefault("corner_radius", 22)
-        kwargs.setdefault("height", 44)
-        kwargs.setdefault("font", ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
-        kwargs.setdefault("fg_color", BRAND_ACCENT)
-        kwargs.setdefault("text_color", "#3E2723")
-        kwargs.setdefault("hover_color", BRAND_HOVER)
-        super().__init__(master, **kwargs)
-
-
-class StatusCard(ctk.CTkFrame):
-    """Stat card showing a label + value."""
-
-    def __init__(self, master, label, value="0", color=BRAND_GREEN, **kwargs):
-        super().__init__(master, fg_color=BRAND_CARD, corner_radius=20, border_width=1, border_color=BRAND_BORDER, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-
-        self.label = ctk.CTkLabel(
-            self, text=label,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
-            text_color=BRAND_DIM
-        )
-        self.label.grid(row=0, column=0, padx=12, pady=(10, 0), sticky="w")
-
-        self.value_label = ctk.CTkLabel(
-            self, text=value,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=28, weight="bold"),
-            text_color=color
-        )
-        self.value_label.grid(row=1, column=0, padx=12, pady=(0, 10), sticky="w")
-
-    def set_value(self, val):
-        self.value_label.configure(text=str(val))
-
-
-# ═══════════════════════════════════════════════════════════════════
-#  MAIN APPLICATION
-# ═══════════════════════════════════════════════════════════════════
-
-
-SETTINGS_PATH = os.path.join(BASE_DIR, "settings.json")
-
 LOCALES = {
     "en": {
-        "tab_dash": "Dashboard", "tab_migrate": "Migrate", "tab_batch": "Batch", "tab_fix": "Fix Errors", "tab_settings": "Settings",
-        "auth_title": "YouTube Music Auth (cURL)", "auth_desc": "Paste your cURL (bash) request below.",
-        "btn_auth": "Authenticate", "btn_start": "▶ START MIGRATION", "btn_stop": "⏹ STOP", "btn_browse": "Browse CSV...",
-        "dash_title": "Dashboard", "dash_sub": "Overview of your migration progress",
+        "tab_dash": f"{ICON_HOME}  Dashboard", "tab_migrate": f"{ICON_ROCKET}  Migrate", 
+        "tab_batch": f"{ICON_BOXES}  Batch", "tab_fix": f"{ICON_WRENCH}  Fix Errors", 
+        "tab_settings": f"{ICON_GEAR}  Settings",
+        "auth_title": "YouTube Music Auth", "auth_desc": "Paste your cURL (bash) request below.",
+        "btn_auth": "Link Account", "btn_start": f"{ICON_PLAY}  START", "btn_stop": f"{ICON_STOP}  STOP", 
+        "btn_browse": f"{ICON_FILE}  Browse CSV...", "dash_title": "Dashboard", "dash_sub": "Overview of your migration progress",
         "stat_mig": "Migrated", "stat_fail": "Failed", "stat_tot": "Total in CSV", "log_title": "Activity Log",
-        "mig_title": "Single CSV Migration", "mig_sub": "Migrate tracks from a single CSV file to YouTube Music",
-        "opt_smart": "Smart Search (duration check ±90s)", "opt_rev": "Reverse Order", "opt_dry": "Dry Run (search only)",
-        "dest_like": "Liked Songs", "dest_new": "Create New Playlist", "dest_exist": "Existing Playlist",
-        "batch_title": "Batch Migration", "batch_sub": "Drop CSVs into the csv_batch folder",
+        "mig_title": "Single CSV Migration", "mig_sub": "Migrate from a single file",
+        "opt_smart": "Smart Search (duration ±90s)", "opt_rev": "Reverse Order", "opt_dry": "Dry Run (simulation)",
+        "dest_like": "Liked Songs", "dest_new": "New Playlist", "dest_exist": "Existing Playlist",
+        "batch_title": "Batch Migration", "batch_sub": "Drop CSVs into csv_batch",
         "btn_batch_start": "Start Batch", "btn_batch_open": "Open Folder",
         "fix_title": "Fix Failed Songs", "fix_sub": "Manually pick the correct track",
-        "btn_fix_load": "Load Failed Songs", "btn_pick": "Pick",
-        "set_title": "Settings", "set_sub": "App Preferences",
-        "set_lang": "Language", "set_theme": "Theme", "set_reset": "Reset Data",
-        "btn_reset_prog": "Reset Progress", "btn_reset_auth": "Reset Auth", "btn_reset_hist": "Reset History",
-        "theme_coffee": "Coffee", "theme_dark": "Dark", "theme_light": "Light",
+        "btn_fix_load": "Load Errors", "btn_pick": "Pick", "set_title": "Settings", "set_sub": "App Preferences",
+        "set_lang": "Language", "set_theme": "Theme", "set_bg": "Custom Background",
+        "set_reset": "Reset Data", "btn_reset_prog": "Reset Progress", "btn_reset_auth": "Sign Out", "btn_reset_hist": "Clear History",
+        "theme_coffee": "Coffee", "theme_dark": "Dark", "theme_light": "Light", "theme_asphalt": "Asphalt",
+        "btn_load_bg": "Load Custom Image", "btn_clear_bg": "Clear Background",
         "eta_msg": "ETA: {eta}  •  {pct}%", "conn_yes": "Connected", "conn_no": "Disconnected",
-        "msg_playlists": "Your Playlists:", "err_auth_first": "Go to Settings and authenticate first."
+        "msg_playlists": "Your Playlists:", "err_auth_first": "Authenticate in Migrate tab first."
     },
     "ru": {
-        "tab_dash": "Дашборд", "tab_migrate": "Миграция", "tab_batch": "Пакетно", "tab_fix": "Ошибки", "tab_settings": "Настройки",
-        "auth_title": "Авторизация (cURL)", "auth_desc": "Вставьте cURL из браузера для входа.",
-        "btn_auth": "Войти", "btn_start": "▶ СТАРТ", "btn_stop": "⏹ СТОП", "btn_browse": "Выбрать CSV...",
-        "dash_title": "Дашборд", "dash_sub": "Обзор процесса миграции",
+        "tab_dash": f"{ICON_HOME}  Дашборд", "tab_migrate": f"{ICON_ROCKET}  Миграция", 
+        "tab_batch": f"{ICON_BOXES}  Пакетно", "tab_fix": f"{ICON_WRENCH}  Ошибки", 
+        "tab_settings": f"{ICON_GEAR}  Настройки",
+        "auth_title": "Авторизация", "auth_desc": "Вставьте cURL из браузера для входа в YT Music.",
+        "btn_auth": "Войти", "btn_start": f"{ICON_PLAY}  ПУСК", "btn_stop": f"{ICON_STOP}  СТОП", 
+        "btn_browse": f"{ICON_FILE}  Выбрать CSV...", "dash_title": "Дашборд", "dash_sub": "Обзор процесса миграции",
         "stat_mig": "Успешно", "stat_fail": "Ошибки", "stat_tot": "Всего", "log_title": "Лог Активности",
-        "mig_title": "Миграция одного CSV", "mig_sub": "Перенос треков из одного файла CSV",
-        "opt_smart": "Умный поиск (проверка длительности ±90с)", "opt_rev": "Обратный порядок", "opt_dry": "Симоляция (без лайков)",
-        "dest_like": "Мне нравится", "dest_new": "Новый плейлист", "dest_exist": "Существующий плейлист",
-        "batch_title": "Пакетная миграция", "batch_sub": "Закиньте CSV файлы в папку csv_batch",
+        "mig_title": "Одиночная Миграция", "mig_sub": "Перенос из отдельного файла CSV",
+        "opt_smart": "Умный поиск (длительность ±90с)", "opt_rev": "В обратном порядке", "opt_dry": "Симуляция (без добавления)",
+        "dest_like": "Мне нравится", "dest_new": "Новый плейлист", "dest_exist": "Свой плейлист",
+        "batch_title": "Пакетная মিграция", "batch_sub": "Поместите CSV в папку csv_batch",
         "btn_batch_start": "Начать", "btn_batch_open": "Открыть папку",
-        "fix_title": "Исправление ошибок", "fix_sub": "Выбор правильных треков вручную",
-        "btn_fix_load": "Загрузить ошибки", "btn_pick": "Выбрать",
-        "set_title": "Настройки", "set_sub": "Параметры приложения",
-        "set_lang": "Язык", "set_theme": "Тема", "set_reset": "Сброс данных",
-        "btn_reset_prog": "Сброс прогресса", "btn_reset_auth": "Выйти из YT", "btn_reset_hist": "Очистить историю",
-        "theme_coffee": "Кофейная", "theme_dark": "Тёмная", "theme_light": "Светлая",
+        "fix_title": "Исправление Ошибок", "fix_sub": "Выбор правильных треков вручную",
+        "btn_fix_load": "Загрузить ошибки", "btn_pick": "Выбрать", "set_title": "Настройки", "set_sub": "Параметры",
+        "set_lang": "Язык", "set_theme": "Тема Оформления", "set_bg": "Свой Фон",
+        "set_reset": "Сброс Данных", "btn_reset_prog": "Сброс прогресса", "btn_reset_auth": "Выйти из YT", "btn_reset_hist": "Очистить историю",
+        "theme_coffee": "Кофейная", "theme_dark": "Тёмная", "theme_light": "Светлая", "theme_asphalt": "Асфальт",
+        "btn_load_bg": "Выбрать Картинку", "btn_clear_bg": "Удалить Фон",
         "eta_msg": "Осталось: {eta}  •  {pct}%", "conn_yes": "Подключено", "conn_no": "Не авторизован",
-        "msg_playlists": "Ваши плейлисты:", "err_auth_first": "Сначала авторизуйтесь в настройках."
+        "msg_playlists": "Ваши плейлисты:", "err_auth_first": "Сначала авторизуйтесь на вкладке ミграция."
     }
 }
 
@@ -340,9 +150,45 @@ THEMES = {
         "surface": "#E2E8F0", "card": "#FFFFFF", "border": "#CBD5E1",
         "text": "#0F172A", "dim": "#64748B", "red": "#DC2626",
         "yellow": "#D97706", "cyan": "#0284C7", "green": "#059669"
+    },
+    "asphalt": {
+        "accent": "#efede3", "hover": "#e0ded4", "dark": "#302f2c",
+        "surface": "#252422", "card": "#3A3935", "border": "#4F4E49",
+        "text": "#F8FAFC", "dim": "#A3A199", "red": "#FF6B6B",
+        "yellow": "#F59E0B", "cyan": "#38BDF8", "green": "#00E676",
+        "grad_top": "#efede3", "grad_bot": "#302f2c"
     }
 }
 
+from patch_migrate import universal_csv_parser, log_failed_song, parse_curl
+import patch_migrate # ensure patched
+
+# History routines
+def load_history():
+    if not os.path.exists(HISTORY_PATH): return set()
+    try:
+        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+            return set(json.load(f))
+    except Exception: return set()
+
+def save_history(h):
+    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+        json.dump(list(h), f, ensure_ascii=False, indent=2)
+
+def load_progress():
+    if not os.path.exists(PROGRESS_PATH):
+        return {"processed_rows": 0, "migrated_count": 0, "failed_rows": 0}
+    try:
+        with open(PROGRESS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"processed_rows": 0, "migrated_count": 0, "failed_rows": 0}
+
+def save_progress(p):
+    with open(PROGRESS_PATH, "w", encoding="utf-8") as f:
+        json.dump(p, f, ensure_ascii=False, indent=2)
+
+# ─── UI Components ────────────────────────────────────────────────
 class GlowButton(ctk.CTkButton):
     def __init__(self, master, current_theme, **kwargs):
         kwargs.setdefault("corner_radius", 22)
@@ -350,6 +196,7 @@ class GlowButton(ctk.CTkButton):
         kwargs.setdefault("font", ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
         kwargs.setdefault("fg_color", THEMES[current_theme]["accent"])
         text_color = "#3E2723" if current_theme == "coffee" else THEMES[current_theme]["dark"]
+        if current_theme == "asphalt": text_color = THEMES[current_theme]["dark"]
         kwargs.setdefault("text_color", text_color)
         kwargs.setdefault("hover_color", THEMES[current_theme]["hover"])
         super().__init__(master, **kwargs)
@@ -357,13 +204,13 @@ class GlowButton(ctk.CTkButton):
 class StatusCard(ctk.CTkFrame):
     def __init__(self, master, label, current_theme, value="0", color_key="accent", **kwargs):
         c_th = THEMES[current_theme]
+        # Make cards semi-transparent (a workaround is putting them on a surface frame) but we use solid for now
         super().__init__(master, fg_color=c_th["card"], corner_radius=20, border_width=1, border_color=c_th["border"], **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.label = ctk.CTkLabel(self, text=label, font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=c_th["dim"])
         self.label.grid(row=0, column=0, padx=12, pady=(10, 0), sticky="w")
         self.value_label = ctk.CTkLabel(self, text=value, font=ctk.CTkFont(family=FONT_FAMILY, size=28, weight="bold"), text_color=c_th[color_key])
         self.value_label.grid(row=1, column=0, padx=12, pady=(0, 10), sticky="w")
-
     def set_value(self, val):
         self.value_label.configure(text=str(val))
 
@@ -374,8 +221,8 @@ class MigratifyApp(ctk.CTk):
         self.geometry("960x680")
         self.minsize(800, 600)
 
-        # Load settings
-        self.settings = {"lang": "en", "theme": "coffee"}
+        # Settings
+        self.settings = {"lang": "en", "theme": "coffee", "bg_image": "", "bg_blur": 15}
         if os.path.exists(SETTINGS_PATH):
             try:
                 with open(SETTINGS_PATH, "r") as f:
@@ -384,64 +231,136 @@ class MigratifyApp(ctk.CTk):
 
         self.lang = self.settings["lang"]
         self.theme = self.settings["theme"]
-
+        
         self.ytm = None
         self.csv_path = None
         self.songs = []
-        self.is_migrating = False
-        self.stop_flag = False
-        self.pages = {}
-        self.nav_buttons = {}
+        self.is_migrating, self.stop_flag = False, False
+        self.pages, self.nav_buttons = {}, {}
 
-        self.last_anim_step = 0.0
+        # The Backing Canvas for Image/Gradient
+        self.bg_label = ctk.CTkLabel(self, text="")
+        self.bg_label.place(relx=0, rely=0, relwidth=1, relheight=1)
 
         self._build_app()
         self._check_auth_status()
-
-    def tr(self, key):
-        return LOCALES[self.lang].get(key, key)
-
-    def th(self, key):
-        return THEMES[self.theme][key]
+        self.bind("<Configure>", self._on_resize)
+        self.after(50, self._render_background)
 
     def _save_settings(self):
         with open(SETTINGS_PATH, "w") as f:
             json.dump(self.settings, f)
 
+    def tr(self, key): return LOCALES[self.lang].get(key, key)
+    def th(self, key): return THEMES[self.theme][key]
+
+    # ── Background Engine ───────────────────────────────────────
+    def _on_resize(self, event):
+        # Debounce the render to save CPU
+        if getattr(self, "_resize_timer", None):
+            self.after_cancel(self._resize_timer)
+        self._resize_timer = self.after(300, self._render_background)
+
+    def _render_background(self):
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 100 or h < 100: return
+
+        if self.settings.get("bg_image") and os.path.exists(self.settings["bg_image"]):
+            # Render Custom Blurred Image
+            try:
+                img = Image.open(self.settings["bg_image"]).convert("RGB")
+                # Resize aspect-fill
+                img_ratio = img.width / img.height
+                scr_ratio = w / h
+                if scr_ratio > img_ratio:
+                    new_w, new_h = w, int(w / img_ratio)
+                else:
+                    new_w, new_h = int(h * img_ratio), h
+                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                # Crop to center
+                left = (new_w - w)/2
+                top = (new_h - h)/2
+                img = img.crop((left, top, left+w, top+h))
+                
+                blur_val = self.settings.get("bg_blur", 15)
+                if blur_val > 0:
+                    img = img.filter(ImageFilter.GaussianBlur(radius=blur_val))
+                
+                # Darken slightly for readability
+                enhancer = Image.eval(img, lambda p: p * 0.7)
+                
+                ctk_img = ctk.CTkImage(light_image=enhancer, dark_image=enhancer, size=(w, h))
+                self.bg_label.configure(image=ctk_img)
+                return
+            except Exception as e:
+                print(f"BG Load Error: {e}")
+        
+        # Render Gradient if supported (e.g. Asphalt)
+        if "grad_top" in THEMES[self.theme]:
+            img = Image.new("RGB", (w, h))
+            draw = ImageDraw.Draw(img)
+            c1_hex = THEMES[self.theme]["grad_top"].lstrip('#')
+            c2_hex = THEMES[self.theme]["grad_bot"].lstrip('#')
+            c1 = tuple(int(c1_hex[i:i+2], 16) for i in (0, 2, 4))
+            c2 = tuple(int(c2_hex[i:i+2], 16) for i in (0, 2, 4))
+            for y in range(h):
+                r = int(c1[0] + (c2[0] - c1[0]) * y / h)
+                g = int(c1[1] + (c2[1] - c1[1]) * y / h)
+                b = int(c1[2] + (c2[2] - c1[2]) * y / h)
+                draw.line([(0, y), (w, y)], fill=(r,g,b))
+            
+            ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(w, h))
+            self.bg_label.configure(image=ctk_img)
+        else:
+            self.bg_label.configure(image=None, fg_color=self.th("dark"))
+
     def _apply_language(self, val):
-        lang_id = "ru" if val == "Русский" else "en"
-        self.settings["lang"] = lang_id
-        self._save_settings()
-        self.destroy()
-        import subprocess, sys
+        self.settings["lang"] = "ru" if val == "Русский" else "en"
+        self._save_settings(); self.destroy()
         subprocess.Popen([sys.executable, "gui.py"])
 
     def _apply_theme_setting(self, val):
-        t_id_map = {"Кофейная": "coffee", "Coffee": "coffee", "Dark": "dark", "Тёмная": "dark", "Light": "light", "Светлая": "light"}
+        t_id_map = {
+            "Кофейная": "coffee", "Coffee": "coffee", 
+            "Dark": "dark", "Тёмная": "dark", 
+            "Light": "light", "Светлая": "light",
+            "Asphalt": "asphalt", "Асфальт": "asphalt"
+        }
         self.settings["theme"] = t_id_map[val]
-        self._save_settings()
-        self.destroy()
-        import subprocess, sys
+        self._save_settings(); self.destroy()
+        subprocess.Popen([sys.executable, "gui.py"])
+
+    def _load_custom_bg(self):
+        filename = filedialog.askopenfilename(title="Select Background Image", filetypes=[("Images", "*.jpg *.jpeg *.png")])
+        if filename:
+            self.settings["bg_image"] = filename
+            self._save_settings(); self.destroy()
+            subprocess.Popen([sys.executable, "gui.py"])
+
+    def _clear_custom_bg(self):
+        self.settings["bg_image"] = ""
+        self._save_settings(); self.destroy()
         subprocess.Popen([sys.executable, "gui.py"])
 
     def _build_app(self):
+        # We handle backgrounds manually
         self.configure(fg_color=self.th("dark"))
-        # Clear existing
-        for widget in self.winfo_children():
-            widget.destroy()
+        for widget in self.winfo_children(): widget.destroy()
 
         self.grid_rowconfigure(0, weight=0) # Navbar
-        self.grid_rowconfigure(1, weight=1) # Main Area
-        self.grid_rowconfigure(2, weight=0) # Bar (Global Bottom)
+        self.grid_rowconfigure(1, weight=0) # Global Bar (Top Launcher Style)
+        self.grid_rowconfigure(2, weight=1) # Main Area
         self.grid_columnconfigure(0, weight=1)
 
         # ── Navbar ───────────────────────────────────────────────
-        navbar = ctk.CTkFrame(self, height=54, fg_color=self.th("surface"), corner_radius=0)
+        nav_bg = self.th("surface")
+        navbar = ctk.CTkFrame(self, height=54, fg_color=nav_bg, corner_radius=0, border_color=self.th("border"), border_width=1)
         navbar.grid(row=0, column=0, sticky="ew")
         navbar.grid_columnconfigure(1, weight=1)
 
-        # Logo
-        logo = ctk.CTkLabel(navbar, text="Migratify", font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"), text_color=self.th("accent"))
+        # Logo + Moon
+        logo_txt = f"Migratify  {ICON_MOON}"
+        logo = ctk.CTkLabel(navbar, text=logo_txt, font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"), text_color=self.th("accent"))
         logo.pack(side="left", padx=(24, 0), pady=12)
 
         nav_items = [
@@ -456,21 +375,44 @@ class MigratifyApp(ctk.CTk):
         btn_area.pack(side="left", fill="y", padx=(20, 0))
 
         for label, key in nav_items:
+            # We use Font Awesome here
             btn = ctk.CTkButton(
                 btn_area, text=label, width=1, height=36, corner_radius=18,
                 fg_color="transparent", text_color=self.th("text"), hover_color=self.th("card"),
-                font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+                font=ctk.CTkFont(family=ICON_FONT, size=13),
                 command=lambda k=key: self._switch_tab(k)
             )
-            btn.pack(side="left", padx=4, pady=9)
+            btn.pack(side="left", padx=6, pady=9)
             self.nav_buttons[key] = btn
 
-        self.auth_indicator = ctk.CTkLabel(navbar, text=self.tr("conn_no"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("red"))
+        self.auth_indicator = ctk.CTkLabel(navbar, text=self.tr("conn_no"), font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), text_color=self.th("red"))
         self.auth_indicator.pack(side="right", padx=24, pady=12)
+
+        # ── Global Action Bar (TOP) ────────────────────────────────
+        self.action_bar = ctk.CTkFrame(self, height=72, fg_color=self.th("card"), corner_radius=0, border_width=1, border_color=self.th("border"))
+        self.action_bar.grid(row=1, column=0, sticky="ew")
+        
+        self.action_inner = ctk.CTkFrame(self.action_bar, fg_color="transparent")
+        self.action_inner.pack(fill="x", padx=24, pady=12)
+
+        self.action_start_btn = GlowButton(self.action_inner, current_theme=self.theme, text=self.tr("btn_start"), width=160, font=ctk.CTkFont(family=ICON_FONT, size=14, weight="bold"), command=self._start_from_action_bar)
+        self.action_start_btn.pack(side="left")
+
+        self.action_stop_btn = ctk.CTkButton(self.action_inner, text=self.tr("btn_stop"), width=160, height=44, corner_radius=22, fg_color=self.th("red"), hover_color=self.th("hover"), text_color="white", font=ctk.CTkFont(family=ICON_FONT, size=14, weight="bold"), command=self._stop_migration)
+        
+        self.prog_area = ctk.CTkFrame(self.action_inner, fg_color="transparent")
+        self.prog_area.pack(side="left", fill="both", expand=True, padx=(16, 0))
+        
+        self.global_prog_label = ctk.CTkLabel(self.prog_area, text="", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("dim"))
+        self.global_prog_label.pack(side="top", anchor="w")
+        
+        self.global_prog_bar = ctk.CTkProgressBar(self.prog_area, progress_color=self.th("accent"), fg_color=self.th("surface"), height=8, corner_radius=4)
+        self.global_prog_bar.pack(side="bottom", fill="x", pady=(4, 0))
+        self.global_prog_bar.set(0)
 
         # ── Main Content Container ───────────────────────────────
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_container.grid(row=1, column=0, sticky="nswe")
+        self.main_container.grid(row=2, column=0, sticky="nswe")
         self.main_container.grid_rowconfigure(0, weight=1)
         self.main_container.grid_columnconfigure(0, weight=1)
 
@@ -480,54 +422,23 @@ class MigratifyApp(ctk.CTk):
         self._build_fix_page()
         self._build_settings_page()
 
-        # ── Global Action Bar ────────────────────────────────────
-        self.action_bar = ctk.CTkFrame(self, height=72, fg_color=self.th("card"), corner_radius=0, border_width=1, border_color=self.th("border"))
-        self.action_bar.grid(row=2, column=0, sticky="ew")
-        
-        # Start button
-        self.action_start_btn = GlowButton(self.action_bar, current_theme=self.theme, text=self.tr("btn_start"), width=200, command=self._start_from_action_bar)
-        self.action_start_btn.pack(side="left", padx=24, pady=14)
-
-        # Stop button (hidden initially)
-        self.action_stop_btn = ctk.CTkButton(self.action_bar, text=self.tr("btn_stop"), width=120, height=44, corner_radius=22, fg_color=self.th("red"), hover_color=self.th("hover"), text_color="white", command=self._stop_migration)
-        
-        # Progress area
-        prog_area = ctk.CTkFrame(self.action_bar, fg_color="transparent")
-        prog_area.pack(side="left", fill="both", expand=True, padx=(0, 24), pady=18)
-        
-        self.global_prog_label = ctk.CTkLabel(prog_area, text="", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("dim"))
-        self.global_prog_label.pack(side="top", anchor="w")
-        
-        self.global_prog_bar = ctk.CTkProgressBar(prog_area, progress_color=self.th("accent"), fg_color=self.th("surface"), height=6, corner_radius=3)
-        self.global_prog_bar.pack(side="bottom", fill="x")
-        self.global_prog_bar.set(0)
-
-        # Initialize UI state
         self._switch_tab("dashboard")
-        
+
     def _switch_tab(self, tab_name):
         self.current_tab = tab_name
         
-        # Action bar visibility: Hidden on Dashboard and Settings, visible elsewhere
-        if tab_name in ["dashboard", "settings"]:
-            self.action_bar.grid_remove()
-        else:
-            self.action_bar.grid()
+        if tab_name in ["dashboard", "settings"]: self.action_bar.grid_remove()
+        else: self.action_bar.grid()
 
         for key, btn in self.nav_buttons.items():
-            if key == tab_name:
-                btn.configure(fg_color=self.th("surface"), text_color=self.th("accent"))
-            else:
-                btn.configure(fg_color="transparent", text_color=self.th("text"))
+            if key == tab_name: btn.configure(fg_color=self.th("surface"), text_color=self.th("accent"))
+            else: btn.configure(fg_color="transparent", text_color=self.th("text"))
 
         for key, page in self.pages.items():
             if key != tab_name:
-                try:
-                    page.place_forget()
-                    page.grid_forget()
+                try: page.place_forget()
                 except: pass
 
-        self.pages[tab_name].grid_forget()
         self.pages[tab_name].place(relx=0.08, rely=0, relwidth=1, relheight=1)
         self._animate_slide(tab_name, 0.08)
 
@@ -538,7 +449,6 @@ class MigratifyApp(ctk.CTk):
             self.after(16, self._animate_slide, tab_name, new_relx)
         else:
             self.pages[tab_name].place(relx=0, rely=0, relwidth=1, relheight=1)
-
 
     # ── Pages ─────────────────────────────────────────────────────
 
@@ -561,7 +471,6 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkLabel(page, text=self.tr("log_title"), font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"), text_color=self.th("text")).grid(row=3, column=0, columnspan=3, padx=24, pady=(20, 4), sticky="w")
         
-        # Split logs and playlists horizontally at bottom Dashboard
         split = ctk.CTkFrame(page, fg_color="transparent")
         split.grid(row=4, column=0, columnspan=3, padx=24, pady=(0, 24), sticky="nswe")
         split.grid_columnconfigure(0, weight=2)
@@ -578,7 +487,6 @@ class MigratifyApp(ctk.CTk):
         page = ctk.CTkScrollableFrame(self.main_container, fg_color="transparent")
         self.pages["migrate"] = page
 
-        # -- Auth Section --
         auth_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
         auth_card.pack(padx=24, pady=8, fill="x")
         ctk.CTkLabel(auth_card, text=self.tr("auth_title"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 4), anchor="w")
@@ -593,7 +501,6 @@ class MigratifyApp(ctk.CTk):
         self.auth_status_label = ctk.CTkLabel(btn_row, text="", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("dim"))
         self.auth_status_label.pack(side="left", padx=12)
 
-        # -- CSV Section --
         csv_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
         csv_card.pack(padx=24, pady=8, fill="x")
 
@@ -602,7 +509,7 @@ class MigratifyApp(ctk.CTk):
         self.csv_label = ctk.CTkLabel(file_row, text="No CSV selected", font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("dim"))
         self.csv_label.pack(side="left", fill="x", expand=True)
 
-        ctk.CTkButton(file_row, text=self.tr("btn_browse"), width=140, height=36, corner_radius=18, fg_color=self.th("border"), hover_color=self.th("surface"), text_color=self.th("text"), font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), command=self._browse_csv).pack(side="right")
+        ctk.CTkButton(file_row, text=self.tr("btn_browse"), width=140, height=36, corner_radius=18, fg_color=self.th("border"), hover_color=self.th("surface"), text_color=self.th("text"), font=ctk.CTkFont(family=ICON_FONT, size=13), command=self._browse_csv).pack(side="right")
 
         opts_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
         opts_card.pack(padx=24, pady=8, fill="x")
@@ -674,8 +581,11 @@ class MigratifyApp(ctk.CTk):
         theme_card.pack(padx=24, pady=8, fill="x")
         ctk.CTkLabel(theme_card, text=self.tr("set_theme"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 8), anchor="w")
         
-        self.theme_var = ctk.StringVar(value={"coffee": self.tr("theme_coffee"), "dark": self.tr("theme_dark"), "light": self.tr("theme_light")}[self.theme])
-        theme_opt = ctk.CTkOptionMenu(theme_card, variable=self.theme_var, values=[self.tr("theme_coffee"), self.tr("theme_dark"), self.tr("theme_light")], fg_color=self.th("surface"), button_color=self.th("border"), button_hover_color=self.th("hover"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._apply_theme_setting)
+        t_vals = [self.tr("theme_coffee"), self.tr("theme_dark"), self.tr("theme_light"), self.tr("theme_asphalt")]
+        t_id_rev = {"coffee": self.tr("theme_coffee"), "dark": self.tr("theme_dark"), "light": self.tr("theme_light"), "asphalt": self.tr("theme_asphalt")}
+        self.theme_var = ctk.StringVar(value=t_id_rev.get(self.theme, self.tr("theme_coffee")))
+        
+        theme_opt = ctk.CTkOptionMenu(theme_card, variable=self.theme_var, values=t_vals, fg_color=self.th("surface"), button_color=self.th("border"), button_hover_color=self.th("hover"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._apply_theme_setting)
         theme_opt.pack(padx=16, pady=(0, 16), anchor="w")
 
         # Language Section
@@ -686,6 +596,18 @@ class MigratifyApp(ctk.CTk):
         self.lang_var = ctk.StringVar(value="English" if self.lang == "en" else "Русский")
         lang_opt = ctk.CTkOptionMenu(lang_card, variable=self.lang_var, values=["English", "Русский"], fg_color=self.th("surface"), button_color=self.th("border"), button_hover_color=self.th("hover"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), dropdown_font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._apply_language)
         lang_opt.pack(padx=16, pady=(0, 16), anchor="w")
+
+        # Custom Background
+        bg_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
+        bg_card.pack(padx=24, pady=8, fill="x")
+        ctk.CTkLabel(bg_card, text=self.tr("set_bg"), font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"), text_color=self.th("text")).pack(padx=16, pady=(12, 8), anchor="w")
+        
+        bg_btns = ctk.CTkFrame(bg_card, fg_color="transparent")
+        bg_btns.pack(padx=16, pady=(0, 16), fill="x")
+        ctk.CTkButton(bg_btns, text=self.tr("btn_load_bg"), width=160, height=36, corner_radius=18, fg_color=self.th("accent"), hover_color=self.th("hover"), text_color=self.th("dark"), font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"), command=self._load_custom_bg).pack(side="left", padx=(0, 12))
+        
+        if self.settings.get("bg_image"):
+            ctk.CTkButton(bg_btns, text=self.tr("btn_clear_bg"), width=160, height=36, corner_radius=18, fg_color=self.th("border"), hover_color=self.th("red"), text_color=self.th("text"), font=ctk.CTkFont(family=FONT_FAMILY, size=12), command=self._clear_custom_bg).pack(side="left")
 
         # Reset Section
         reset_card = ctk.CTkFrame(page, fg_color=self.th("card"), corner_radius=20, border_width=1, border_color=self.th("border"))
@@ -709,7 +631,7 @@ class MigratifyApp(ctk.CTk):
 
     def _open_batch_folder(self):
         os.makedirs(BATCH_DIR, exist_ok=True)
-        import subprocess, platform
+        import platform
         system = platform.system()
         if system == "Windows": os.startfile(BATCH_DIR)
         elif system == "Darwin": subprocess.Popen(["open", BATCH_DIR])
@@ -729,7 +651,6 @@ class MigratifyApp(ctk.CTk):
             try:
                 self.ytm = YTMusic(AUTH_JSON_PATH)
                 self.auth_indicator.configure(text=self.tr("conn_yes"), text_color=self.th("green"))
-                # Try loading playlists
                 threading.Thread(target=self._load_playlists, daemon=True).start()
             except Exception as e:
                 self.ytm = None
@@ -769,18 +690,16 @@ class MigratifyApp(ctk.CTk):
             self.auth_status_label.configure(text=err, text_color=self.th("red"))
             return
 
-        with open(HEADERS_PATH, "w", encoding="utf-8") as f:
-            f.write(headers_raw)
+        with open(HEADERS_PATH, "w", encoding="utf-8") as f: f.write(headers_raw)
 
         try:
             setup_browser(HEADERS_PATH, AUTH_JSON_PATH)
             self.ytm = YTMusic(AUTH_JSON_PATH)
             self.auth_status_label.configure(text="Authentication successful!", text_color=self.th("green"))
             self._check_auth_status()
-            if os.path.exists(HEADERS_PATH):
-                os.remove(HEADERS_PATH)
+            if os.path.exists(HEADERS_PATH): os.remove(HEADERS_PATH)
         except Exception as e:
-            self.auth_status_label.configure(text=f"Failed: {str(e)[:50]}", text_color=self.th("red"))
+            self.auth_status_label.configure(text=f"Failed", text_color=self.th("red"))
             self.ytm = None
             self._check_auth_status()
 
@@ -801,26 +720,23 @@ class MigratifyApp(ctk.CTk):
             for p in [AUTH_JSON_PATH, HEADERS_PATH]:
                 if os.path.exists(p): os.remove(p)
             self._check_auth_status()
+            self._update_playlists_box("")
+            self.ytm = None
 
     def _reset_history(self):
         if messagebox.askyesno("Confirm", "Clear migration history (allows duplicates)?"):
             if os.path.exists(HISTORY_PATH): os.remove(HISTORY_PATH)
 
     def _start_from_action_bar(self):
-        if self.current_tab == "batch":
-            self._start_batch_migration()
-        else:
-            self._start_migration()
+        if self.current_tab == "batch": self._start_batch_migration()
+        else: self._start_migration()
 
     def _animate_prog_bar(self, target_val, current_val=None):
-        if current_val is None:
-            current_val = self.global_prog_bar.get()
-            
+        if current_val is None: current_val = self.global_prog_bar.get()
         diff = target_val - current_val
         if abs(diff) < 0.01:
             self.global_prog_bar.set(target_val)
             return
-            
         new_val = current_val + (diff * 0.2)
         self.global_prog_bar.set(new_val)
         self.after(20, self._animate_prog_bar, target_val, new_val)
@@ -828,25 +744,18 @@ class MigratifyApp(ctk.CTk):
     def _update_ui_progress(self, current, total, migrated, failed, start_time):
         ratio = current / total if total > 0 else 0
         self._animate_prog_bar(ratio)
-        
         self.card_migrated.set_value(migrated)
         self.card_failed.set_value(failed)
-        
         elapsed = time.time() - start_time
         if ratio > 0.01:
             total_est = elapsed / ratio
             eta = max(0, total_est - elapsed)
             m, s = divmod(int(eta), 60)
             eta_str = f"{m}m {s}s"
-        else:
-            eta_str = "..."
-            
+        else: eta_str = "..."
         msg = self.tr("eta_msg").format(eta=eta_str, pct=int(ratio*100))
         self.global_prog_label.configure(text=msg)
 
-    # ... [Implementation of _start_migration, _worker, _start_batch_migration, _fix logic]
-    # For brevity in this block, I am including the full logic for migration here keeping it identical to original but adapting to the new UI references.
-    
     def _start_migration(self):
         if not self.ytm:
             messagebox.showwarning("Auth Error", self.tr("err_auth_first"))
@@ -860,16 +769,12 @@ class MigratifyApp(ctk.CTk):
             messagebox.showerror("Error", "No tracks found in CSV.")
             return
 
-        if self.reverse_var.get():
-            self.songs.reverse()
+        if self.reverse_var.get(): self.songs.reverse()
 
-        self.is_migrating = True
-        self.stop_flag = False
+        self.is_migrating, self.stop_flag = True, False
         
-        # UI updates: morph button to Stop
         self.action_start_btn.pack_forget()
         self.action_stop_btn.pack(side="left", padx=24, pady=14)
-
         self.card_total.set_value(len(self.songs))
         
         target_dest = self.dest_var.get()
@@ -877,27 +782,15 @@ class MigratifyApp(ctk.CTk):
         pl_id = None
 
         if target_dest == "new_playlist":
-            if not new_name:
-                messagebox.showerror("Error", "Please enter a playlist name.")
-                self._stop_migration()
-                return
-            try:
-                pl_id = self.ytm.create_playlist(new_name, "Imported from Migratify")
-                self._log_msg(f"Created playlist: {new_name}")
+            try: pl_id = self.ytm.create_playlist(new_name, "Imported from Migratify"); self._log_msg(f"Created playlist")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to create playlist: {e}")
-                self._stop_migration()
-                return
+                self._stop_migration(); return
         elif target_dest == "existing":
-            messagebox.showinfo("Not Supported Yet", "Choose 'Liked Songs' or 'New Playlist'.")
-            self._stop_migration()
-            return
+            messagebox.showinfo("Wait", "Not supported.")
+            self._stop_migration(); return
 
-        kwargs = {
-            "songs": self.songs, "playlist_id": pl_id,
-            "smart": self.smart_var.get(), "dry_run": self.dryrun_var.get(),
-            "target_box": self.log_box
-        }
+        kwargs = {"songs": self.songs, "playlist_id": pl_id, "smart": self.smart_var.get(), "dry_run": self.dryrun_var.get(), "target_box": self.log_box}
         threading.Thread(target=self._worker, kwargs=kwargs, daemon=True).start()
 
     def _stop_migration(self):
@@ -907,113 +800,62 @@ class MigratifyApp(ctk.CTk):
         self.action_start_btn.pack(side="left", padx=24, pady=14)
 
     def _worker(self, songs, playlist_id, smart, dry_run, target_box):
-        history = load_history()
-        progress = load_progress()
-
-        total = len(songs)
-        start_t = time.time()
-        
+        history, progress = load_history(), load_progress()
+        total, start_t = len(songs), time.time()
         for idx, song in enumerate(songs):
             if self.stop_flag: break
-            
             q = f"{song['track']} {song['artist']}".strip()
             self._log_msg(f"[{idx+1}/{total}] Searching: {q}", target_box)
-            
             try:
                 results = self.ytm.search(q, filter="songs")
-                if not results:
+                if not results or not results[0]['videoId']:
                     self._log_msg("  -> Not found.", target_box)
                     progress["failed_rows"] += 1
                     log_failed_song(idx+1, q, "Not found")
                     continue
-                    
                 video_id = results[0]['videoId']
-                if not video_id:
-                    self._log_msg("  -> No Video ID.", target_box)
-                    progress["failed_rows"] += 1
-                    log_failed_song(idx+1, q, "No video ID")
-                    continue
-                    
                 if q in history:
-                    self._log_msg("  -> Skip (in history).", target_box)
-                    progress["processed_rows"] += 1
-                    continue
-                    
+                    progress["processed_rows"] += 1; continue
                 if not dry_run:
-                    if playlist_id:
-                        self.ytm.add_playlist_items(playlist_id, [video_id])
-                    else:
-                        self.ytm.rate_song(video_id, "LIKE")
+                    if playlist_id: self.ytm.add_playlist_items(playlist_id, [video_id])
+                    else: self.ytm.rate_song(video_id, "LIKE")
                     history.add(q)
-                
                 self._log_msg(f"  -> Added: {results[0].get('title', video_id)}", target_box)
-                progress["migrated_count"] += 1
-                progress["processed_rows"] += 1
-                
+                progress["migrated_count"] += 1; progress["processed_rows"] += 1
             except Exception as e:
                 self._log_msg(f"  -> Error: {e}", target_box)
-                progress["failed_rows"] += 1
-                log_failed_song(idx+1, q, str(e))
-                
-            save_history(history)
-            save_progress(progress)
-            
+                progress["failed_rows"] += 1; log_failed_song(idx+1, q, str(e))
+            save_history(history); save_progress(progress)
             self.after(0, self._update_ui_progress, progress["processed_rows"], total, progress["migrated_count"], progress["failed_rows"], start_t)
             time.sleep(0.5)
-            
         self.after(0, self._stop_migration)
         self._log_msg("Migration finished or stopped.", target_box)
 
     def _start_batch_migration(self):
-        if not self.ytm:
-            messagebox.showwarning("Auth Error", self.tr("err_auth_first"))
-            return
-            
+        if not self.ytm: return
         os.makedirs(BATCH_DIR, exist_ok=True)
         files = [f for f in os.listdir(BATCH_DIR) if f.lower().endswith(".csv")]
-        if not files:
-            messagebox.showinfo("Batch Empty", "No CSV files found in 'csv_batch' folder.")
-            return
-            
-        self.is_migrating = True
-        self.stop_flag = False
-        
+        if not files: return
+        self.is_migrating, self.stop_flag = True, False
         self.action_start_btn.pack_forget()
         self.action_stop_btn.pack(side="left", padx=24, pady=14)
-        
         threading.Thread(target=self._batch_worker, args=(files,), daemon=True).start()
         
     def _batch_worker(self, files):
         start_t = time.time()
         for i, fname in enumerate(files):
             if self.stop_flag: break
-            
-            self._log_msg(f"=== Starting batch file: {fname} ===", self.batch_log)
             p = os.path.join(BATCH_DIR, fname)
             songs = universal_csv_parser(p)
             if not songs: continue
-            
             pl_name = fname.rsplit(".", 1)[0]
-            try:
-                pl_id = self.ytm.create_playlist(pl_name, "Batch Imported")
-                self._log_msg(f"Created playlist: {pl_name}", self.batch_log)
-            except Exception as e:
-                self._log_msg(f"Error creating playlist: {e}", self.batch_log)
-                continue
-                
-            self._worker(songs, pl_id, self.batch_smart_var.get(), False, self.batch_log)
-            
+            try: pl_id = self.ytm.create_playlist(pl_name, "Batch"); self._worker(songs, pl_id, self.batch_smart_var.get(), False, self.batch_log)
+            except Exception: continue
         self.after(0, self._stop_migration)
-        self._log_msg("=== Batch Process Complete ===", self.batch_log)
 
     def _load_failed_songs(self):
-        if not os.path.exists(FAILED_CSV_PATH):
-            messagebox.showinfo("Clean", "No failed songs found.")
-            return
-        
-        for w in self.fix_scroll.winfo_children():
-            w.destroy()
-            
+        if not os.path.exists(FAILED_CSV_PATH): return
+        for w in self.fix_scroll.winfo_children(): w.destroy()
         with open(FAILED_CSV_PATH, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             next(reader, None)
@@ -1023,7 +865,6 @@ class MigratifyApp(ctk.CTk):
                     f = ctk.CTkFrame(self.fix_scroll, fg_color=self.th("card"), corner_radius=12, border_width=1, border_color=self.th("border"))
                     f.pack(fill="x", pady=4, padx=4)
                     ctk.CTkLabel(f, text=f"{q}", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=self.th("text")).pack(side="left", padx=12, pady=12)
-                    ctk.CTkButton(f, text=self.tr("btn_pick"), width=80, height=28, corner_radius=14, fg_color=self.th("accent"), hover_color=self.th("hover"), text_color="#281914", font=ctk.CTkFont(weight="bold")).pack(side="right", padx=12)
 
 if __name__ == "__main__":
     app = MigratifyApp()
