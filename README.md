@@ -13,7 +13,7 @@
 * **Умное авто-возобновление**: Если ваш токен истечет из-за сброса сессии (ошибка 401: Unauthorized), весь прогресс сохранится. Просто обновите куки, и он продолжит с той же песни без двойных лайков.
 * **Продвинутые режимы**: Перенесите всю библиотеку, укажите точный диапазон (например, треки `100-500`) или запустите **Тестовый режим (Dry Run)**, чтобы скрипт просто поискал треки без проставления лайков.
 * **Реверс-режим**: Запустите скрипт снизу-вверх, чтобы самые старые треки в YouTube Music оказались в самом низу вашего плейлиста.
-* **Лог пропущенных треков**: Автоматически создает `failed_songs.csv` со списком тех песен, которые не нашлись для ручного добавления.
+* **Система логов**: Автоматически создает `logs.txt` для технической отладки и `failed_songs.csv` со списком тех песен, которые не нашлись.
 
 ## 📥 Установка (Windows / Linux / Mac)
 
@@ -122,7 +122,7 @@ This tool bypasses closed APIs and paid developer license restrictions by relyin
 * **Smart Search**: Filters search results on YouTube by exact duration matching (within 90 seconds) so it doesn't accidentally pick a "10-hour loop version" or a fan-remix.
 * **Modular Architecture**: Terminal menu lets you select Source and Target ecosystems with detailed instructions. Current fully tested path: `Universal CSV ➔ YouTube Music`.
 * **Smart Auto-Resume**: The script remembers exactly where it stopped. If your tokens expire (401 error), you can fetch new ones, and it will resume right where it left off!
-* **Advanced Processing**: Dry-Run mode, track range processing (e.g. `100-500`), and 'Reverse Order' reading.
+
 * **Failed Tracks Export**: Automatically creates a `failed_songs.csv` log for tracks it couldn't reliably find, so you can manually review/add them later.
 
 ## 📥 Installation

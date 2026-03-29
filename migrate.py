@@ -17,6 +17,12 @@ HEADERS_PATH = os.path.join(BASE_DIR, "headers.txt")
 AUTH_JSON_PATH = os.path.join(BASE_DIR, "oauth.json")
 PROGRESS_PATH = os.path.join(BASE_DIR, "progress.json")
 FAILED_CSV_PATH = os.path.join(BASE_DIR, "failed_songs.csv")
+LOGS_PATH = os.path.join(BASE_DIR, "logs.txt")
+
+def log_to_file(message):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOGS_PATH, "a", encoding="utf-8") as f:
+        f.write(f"[{timestamp}] {message}\n")
 
 LOGO = fr"""{Fore.MAGENTA}{Style.BRIGHT}
   __  __ _                 _   _  __       
@@ -62,7 +68,13 @@ LANG_DATA = {
         "session_expired": f"\n{Fore.RED}⚠️ SESSION EXPIRED at track {{0}}! YouTube Music tokens need to be updated.",
         "session_ins": "Please update headers.txt with a new cURL, delete oauth.json, and restart.",
         "user_stop": f"\n{Fore.YELLOW}🛑 Stopped by user. Progress saved.",
-        "final": f"\n{Fore.CYAN}📊 TOTAL: Processed: {{0}}/{{1}} | Migrated: {{2}} | Failed: {{3}}"
+        "final": f"\n{Fore.CYAN}📊 TOTAL: Processed: {{0}}/{{1}} | Migrated: {{2}} | Failed: {{3}}",
+        "retry_msg": f"\n{Fore.YELLOW}Try again? (y/n): ",
+        "exportify_ins": f"{Fore.CYAN}\n--- HOW TO GET CSV (Exportify) ---\n{Style.RESET_ALL}"
+                        "1. Go to https://exportify.net/ and log in.\n"
+                        "2. Find 'Liked Songs' and click 'Export'.\n"
+                        "3. Rename the file to 'library.csv' and place it here.",
+        "log_start": "--- NEW SESSION STARTED ---"
     },
     "ru": {
         "file_not_found": f"{Fore.RED}❌ Универсальный CSV файл не найден:",
@@ -95,7 +107,13 @@ LANG_DATA = {
         "session_expired": f"\n{Fore.RED}⚠️ СЕССИЯ ИСТЕКЛА на песне {{0}}! YouTube Music требует обновления токенов.",
         "session_ins": "Обновите headers.txt новым cURL запросом, удалите oauth.json и запустите заново.",
         "user_stop": f"\n{Fore.YELLOW}🛑 Остановка по команде пользователя. Прогресс сохранен.",
-        "final": f"\n{Fore.CYAN}📊 ИТОГО: Обработано: {{0}}/{{1}} | Перенесено: {{2}} | Ошибок: {{3}}"
+        "final": f"\n{Fore.CYAN}📊 ИТОГО: Обработано: {{0}}/{{1}} | Перенесено: {{2}} | Ошибок: {{3}}",
+        "retry_msg": f"\n{Fore.YELLOW}Попробовать снова? (y/n): ",
+        "exportify_ins": f"{Fore.CYAN}\n--- КАК ПОЛУЧИТЬ CSV (Exportify) ---\n{Style.RESET_ALL}"
+                        "1. Зайдите на https://exportify.net/ и авторизуйтесь.\n"
+                        "2. Найдите 'Liked Songs' и нажмите кнопку 'Export'.\n"
+                        "3. Переименуйте файл в 'library.csv' и положите в папку со скриптом.",
+        "log_start": "--- НОВАЯ СЕССИЯ ЗАПУЩЕНА ---"
     }
 }
 
@@ -176,14 +194,17 @@ def universal_csv_parser(filepath):
                     "artist": artist,
                     "target_sec": target_sec
                 })
+    log_to_file(f"Successfully parsed {len(songs)} songs from CSV.")
     return songs
 
 def main():
     lang_code = get_language()
     t = LANG_DATA[lang_code]
+    log_to_file(f"Session started. Language: {lang_code}")
 
     # Source Selection
     source_input = input(t['menu_source']).strip()
+    log_to_file(f"Source selected: {source_input}")
     if source_input == "2":
         print(t['service_flaws']['ytm'])
         print(t['not_impl'])
@@ -205,54 +226,80 @@ def main():
     
     # If 1 (Universal CSV)
     print(t['service_flaws']['csv'])
+    print(t['exportify_ins'])
 
     # Target Selection
-    target_input = input(t['menu_target']).strip()
-    if target_input == "2":
-        print(t['service_flaws']['spotify'])
-        print(t['not_impl'])
-        return
-    elif target_input == "3":
-        print(t['service_flaws']['apple'])
-        print(t['not_impl'])
-        return
-    elif target_input == "4":
-        print(t['service_flaws']['soundcloud'])
-        print(t['not_impl'])
-        return
-    elif target_input != "1":
-        return
+    while True:
+        target_input = input(t['menu_target']).strip()
+        log_to_file(f"Target selected: {target_input}")
+        if target_input == "1":
+            break
+        elif target_input in ["2", "3", "4"]:
+            print(t['not_impl'])
+        else:
+            print(f"{Fore.RED}❌ Invalid choice.")
+        
+        if input(t['retry_msg']).lower() != 'y':
+            return
 
     # If Target is YT Music
     print(t['service_flaws']['ytm'])
 
-    # File Checks
-    if not os.path.exists(CSV_PATH) and not os.path.exists(os.path.join(BASE_DIR, "liked.csv")):
-        print(f"{t['file_not_found']} {CSV_PATH}")
-        print(t['put_csv'])
-        return
+    # Setup Loop for CSV and Auth
+    while True:
+        actual_csv = CSV_PATH if os.path.exists(CSV_PATH) else os.path.join(BASE_DIR, "liked.csv")
         
-    actual_csv = CSV_PATH if os.path.exists(CSV_PATH) else os.path.join(BASE_DIR, "liked.csv")
+        # Check CSV
+        if not os.path.exists(actual_csv):
+            print(f"{t['file_not_found']} {CSV_PATH}")
+            print(t['put_csv'])
+            if input(t['retry_msg']).lower() == 'y': continue
+            else: return
 
-    # YTM Auth setup
-    if not os.path.exists(AUTH_JSON_PATH):
-        if not os.path.exists(HEADERS_PATH):
-            print(f"{t['headers_not_found']} {HEADERS_PATH}")
-            print(t['headers_ins'])
-            return
-        print(t['setup_auth'])
+        # Auth Setup
+        if not os.path.exists(AUTH_JSON_PATH):
+            if not os.path.exists(HEADERS_PATH):
+                print(f"{t['headers_not_found']} {HEADERS_PATH}")
+                print(t['headers_ins'])
+                if input(t['retry_msg']).lower() == 'y': continue
+                else: return
+            
+            print(t['setup_auth'])
+            try:
+                raw_content = load_headers(HEADERS_PATH).strip()
+                if "cookie:" in raw_content.lower() and "x-goog-authuser:" not in raw_content.lower():
+                    raw_content += "\nx-goog-authuser: 0"
+                
+                setup_browser(AUTH_JSON_PATH, raw_content)
+                print(t['auth_created'])
+                log_to_file("Auth file created successfully.")
+            except Exception as e:
+                error_str = str(e)
+                log_to_file(f"Auth creation failed: {error_str}")
+                if "x-goog-authuser" in error_str:
+                    try:
+                        raw_content = load_headers(HEADERS_PATH).strip() + "\nx-goog-authuser: 0"
+                        setup_browser(AUTH_JSON_PATH, raw_content)
+                        print(f"{Fore.YELLOW}⚠️ Using default authuser=0. {t['auth_created']}")
+                        log_to_file("Forced authuser=0 and succeeded.")
+                    except Exception as e2:
+                        print(f"{t['auth_err']}{e2}")
+                        if input(t['retry_msg']).lower() == 'y': continue
+                        else: return
+                else:
+                    print(f"{t['auth_err']}{e}")
+                    if input(t['retry_msg']).lower() == 'y': continue
+                    else: return
+
         try:
-            raw_curl = load_headers(HEADERS_PATH)
-            setup_browser(AUTH_JSON_PATH, raw_curl)
-            print(t['auth_created'])
+            ytm = YTMusic(AUTH_JSON_PATH)
+            break # Success, exit setup loop
         except Exception as e:
-            print(f"{t['auth_err']}{e}")
-            return
-    try:
-        ytm = YTMusic(AUTH_JSON_PATH)
-    except Exception as e:
-        print(f"{t['ytm_login_err']}{e}")
-        return
+            print(f"{t['ytm_login_err']}{e}")
+            log_to_file(f"YTM login error: {str(e)}")
+            if os.path.exists(AUTH_JSON_PATH): os.remove(AUTH_JSON_PATH)
+            if input(t['retry_msg']).lower() == 'y': continue
+            else: return
         
     # Read Universal CSV
     songs = universal_csv_parser(actual_csv)
@@ -264,6 +311,7 @@ def main():
 
     # Menu Options
     mode = input(t['menu_mode']).strip()
+    log_to_file(f"Migration mode selected: {mode}")
     is_dry_run = (mode == "3")
     custom_range = False
     start_idx = 0
@@ -271,7 +319,8 @@ def main():
 
     if mode == "2":
         r_input = input(t['menu_range']).strip()
-        match = re.match(r'^(\\d+)-(\\d+)$', r_input)
+        log_to_file(f"Range input: {r_input}")
+        match = re.match(r'^(\d+)-(\d+)$', r_input)
         if match:
             start_idx = max(0, int(match.group(1)) - 1)
             end_idx = min(total_csv, int(match.group(2)))
@@ -281,10 +330,12 @@ def main():
             return
 
     order_input = input(t['menu_order']).strip()
+    log_to_file(f"Order input: {order_input}")
     if order_input == "2":
         songs.reverse()
         
     smart_input = input(t['menu_smart']).strip()
+    log_to_file(f"Smart Search input: {smart_input}")
     is_smart = (smart_input == "1")
 
     # Progress load
@@ -345,19 +396,23 @@ def main():
                     
                     progress["migrated_count"] += 1
                     status_text = f"{Fore.GREEN}✅ {'Smart OK' if is_smart else 'OK'}" if not is_dry_run else f"{Fore.GREEN}✅ Found"
+                    log_to_file(f"SUCCESS: [{current_index + 1}] {query} -> Found Video ID: {matched_video_id}")
                 else:
                     progress["failed_rows"] += 1
                     status_text = f"{Fore.RED}❌ Not found"
+                    log_to_file(f"FAILURE: [{current_index + 1}] {query} -> Not found on YT Music.")
                     log_failed_song(current_index + 1, query, "Not found in search")
             except Exception as e:
                 error_msg = str(e)
                 if "401" in error_msg or "Unauthorized" in error_msg:
                     print(t['session_expired'].format(current_index + 1))
                     print(t['session_ins'])
+                    log_to_file(f"CRITICAL ERROR: Session expired at index {current_index + 1}. Error: {error_msg}")
                     break
                 
                 progress["failed_rows"] += 1
                 status_text = f"{Fore.YELLOW}⚠️ Error: {str(e)[:20]}"
+                log_to_file(f"ERROR: [{current_index + 1}] {query} -> Exception: {error_msg}")
                 log_failed_song(current_index + 1, query, error_msg)
 
             progress["processed_rows"] = current_index + 1
@@ -376,6 +431,7 @@ def main():
         if not is_dry_run and not custom_range:
             save_progress(progress)
         print(t['final'].format(progress['processed_rows'] - start_idx, total, progress['migrated_count'], progress['failed_rows']))
+        log_to_file(f"Migration completed. Processed: {progress['processed_rows'] - start_idx}, Total: {total}, Migrated: {progress['migrated_count']}, Failed: {progress['failed_rows']}")
 
 if __name__ == '__main__':
     main()
