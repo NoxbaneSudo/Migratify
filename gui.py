@@ -56,16 +56,20 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 
 # Migratify brand palette
-BRAND_GREEN = "#00E676"
-BRAND_DARK = "#0D1117"
-BRAND_SURFACE = "#161B22"
-BRAND_CARD = "#1C2333"
-BRAND_BORDER = "#30363D"
-BRAND_TEXT = "#E6EDF3"
-BRAND_DIM = "#8B949E"
-BRAND_RED = "#F85149"
-BRAND_YELLOW = "#D29922"
-BRAND_CYAN = "#58A6FF"
+BRAND_ACCENT = "#F4C9D6"     # Peony
+BRAND_HOVER = "#DCC2C5"      # Mocha Latte
+BRAND_DARK = "#281914"       # Deep background
+BRAND_SURFACE = "#352202"    # Lilac Dusk (Sidebar)
+BRAND_CARD = "#3E2723"       # Espresso (Cards)
+BRAND_BORDER = "#5C3A21"     # Lighter brown borders
+BRAND_TEXT = "#FFF0F5"       # Warm white text
+BRAND_DIM = "#DCC2C5"        # Mocha Latte for dim text
+BRAND_RED = "#FF6B6B"
+BRAND_YELLOW = "#E9C46A"
+BRAND_CYAN = "#A2D2FF"
+
+# Alias to avoid breaking existing widget references
+BRAND_GREEN = BRAND_ACCENT 
 
 FONT_FAMILY = "Segoe UI"
 
@@ -231,15 +235,15 @@ def parse_curl(raw_content):
 # ═══════════════════════════════════════════════════════════════════
 
 class GlowButton(ctk.CTkButton):
-    """A button with a subtle glow-on-hover effect."""
+    """A button with a smooth hover effect & rounded edges."""
 
     def __init__(self, master, **kwargs):
-        kwargs.setdefault("corner_radius", 12)
+        kwargs.setdefault("corner_radius", 22)
         kwargs.setdefault("height", 44)
         kwargs.setdefault("font", ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
-        kwargs.setdefault("fg_color", BRAND_GREEN)
-        kwargs.setdefault("text_color", BRAND_DARK)
-        kwargs.setdefault("hover_color", "#33EB91")
+        kwargs.setdefault("fg_color", BRAND_ACCENT)
+        kwargs.setdefault("text_color", "#3E2723")
+        kwargs.setdefault("hover_color", BRAND_HOVER)
         super().__init__(master, **kwargs)
 
 
@@ -247,7 +251,7 @@ class StatusCard(ctk.CTkFrame):
     """Stat card showing a label + value."""
 
     def __init__(self, master, label, value="0", color=BRAND_GREEN, **kwargs):
-        super().__init__(master, fg_color=BRAND_CARD, corner_radius=12, **kwargs)
+        super().__init__(master, fg_color=BRAND_CARD, corner_radius=20, border_width=1, border_color=BRAND_BORDER, **kwargs)
         self.grid_columnconfigure(0, weight=1)
 
         self.label = ctk.CTkLabel(
@@ -339,7 +343,7 @@ class MigratifyApp(ctk.CTk):
                 sidebar, text=label, anchor="w",
                 font=ctk.CTkFont(family=FONT_FAMILY, size=13),
                 fg_color="transparent", text_color=BRAND_TEXT,
-                hover_color=BRAND_CARD, height=38, corner_radius=8,
+                hover_color=BRAND_CARD, height=38, corner_radius=12,
                 command=lambda k=key: self._switch_tab(k)
             )
             btn.grid(row=2 + i, column=0, padx=10, pady=2, sticky="we")
@@ -416,7 +420,7 @@ class MigratifyApp(ctk.CTk):
         self.log_box = ctk.CTkTextbox(
             page, fg_color=BRAND_CARD, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family="Consolas", size=12),
-            corner_radius=12, border_width=1, border_color=BRAND_BORDER,
+            corner_radius=20, border_width=1, border_color=BRAND_BORDER,
             state="disabled"
         )
         self.log_box.grid(row=4, column=0, columnspan=3, padx=24,
@@ -440,7 +444,7 @@ class MigratifyApp(ctk.CTk):
         ).pack(padx=24, pady=(0, 16), anchor="w")
 
         # CSV Selection
-        csv_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        csv_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         csv_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
@@ -461,14 +465,14 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkButton(
             file_row, text="Browse...", width=100, height=32,
-            corner_radius=8, fg_color=BRAND_BORDER,
+            corner_radius=12, fg_color=BRAND_BORDER,
             hover_color=BRAND_CARD, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             command=self._browse_csv
         ).pack(side="right")
 
         # Options card
-        opts_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        opts_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         opts_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
@@ -505,7 +509,7 @@ class MigratifyApp(ctk.CTk):
         ).pack(padx=16, pady=(4, 12), anchor="w")
 
         # Destination
-        dest_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        dest_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         dest_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
@@ -543,13 +547,13 @@ class MigratifyApp(ctk.CTk):
             dest_card, placeholder_text="Playlist name...",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             fg_color=BRAND_SURFACE, border_color=BRAND_BORDER,
-            corner_radius=8, height=36
+            corner_radius=12, height=36
         )
         self.playlist_name_entry.pack(padx=16, pady=(4, 12), fill="x")
 
         # Progress
         progress_card = ctk.CTkFrame(page, fg_color=BRAND_CARD,
-                                     corner_radius=12)
+                                     corner_radius=20)
         progress_card.pack(padx=24, pady=8, fill="x")
 
         self.progress_label = ctk.CTkLabel(
@@ -585,7 +589,7 @@ class MigratifyApp(ctk.CTk):
 
         self.stop_btn = ctk.CTkButton(
             btn_row, text="⏹  STOP", width=100, height=44,
-            corner_radius=12, fg_color=BRAND_RED, hover_color="#FF6B6B",
+            corner_radius=20, fg_color=BRAND_RED, hover_color="#FF6B6B",
             text_color="white",
             font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
             command=self._stop_migration, state="disabled"
@@ -610,7 +614,7 @@ class MigratifyApp(ctk.CTk):
             text_color=BRAND_DIM
         ).grid(row=1, column=0, padx=24, pady=(0, 16), sticky="w")
 
-        info_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        info_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         info_card.grid(row=2, column=0, padx=24, pady=8, sticky="we")
 
         ctk.CTkLabel(
@@ -637,7 +641,7 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkButton(
             btn_row, text="📁  Open Folder", width=160, height=40,
-            corner_radius=10, fg_color=BRAND_BORDER,
+            corner_radius=16, fg_color=BRAND_BORDER,
             hover_color=BRAND_CARD, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=13),
             command=self._open_batch_folder
@@ -670,7 +674,7 @@ class MigratifyApp(ctk.CTk):
         self.batch_log = ctk.CTkTextbox(
             page, fg_color=BRAND_CARD, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family="Consolas", size=12),
-            corner_radius=12, border_width=1, border_color=BRAND_BORDER,
+            corner_radius=20, border_width=1, border_color=BRAND_BORDER,
             state="disabled"
         )
         self.batch_log.grid(row=6, column=0, padx=24, pady=(0, 24),
@@ -725,7 +729,7 @@ class MigratifyApp(ctk.CTk):
         ).pack(padx=24, pady=(0, 16), anchor="w")
 
         # Auth card
-        auth_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        auth_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         auth_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
@@ -747,7 +751,7 @@ class MigratifyApp(ctk.CTk):
             auth_card, height=160, fg_color=BRAND_SURFACE,
             text_color=BRAND_TEXT,
             font=ctk.CTkFont(family="Consolas", size=11),
-            corner_radius=8, border_width=1, border_color=BRAND_BORDER
+            corner_radius=12, border_width=1, border_color=BRAND_BORDER
         )
         self.curl_textbox.pack(padx=16, pady=(0, 8), fill="x")
 
@@ -767,7 +771,7 @@ class MigratifyApp(ctk.CTk):
         self.auth_status_label.pack(side="left", padx=12)
 
         # Reset card
-        reset_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=12)
+        reset_card = ctk.CTkFrame(page, fg_color=BRAND_CARD, corner_radius=20)
         reset_card.pack(padx=24, pady=8, fill="x")
 
         ctk.CTkLabel(
@@ -781,7 +785,7 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkButton(
             btns, text="Reset Progress", width=140, height=36,
-            corner_radius=8, fg_color=BRAND_BORDER,
+            corner_radius=12, fg_color=BRAND_BORDER,
             hover_color=BRAND_RED, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             command=self._reset_progress
@@ -789,7 +793,7 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkButton(
             btns, text="Reset Auth", width=140, height=36,
-            corner_radius=8, fg_color=BRAND_BORDER,
+            corner_radius=12, fg_color=BRAND_BORDER,
             hover_color=BRAND_RED, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             command=self._reset_auth
@@ -797,7 +801,7 @@ class MigratifyApp(ctk.CTk):
 
         ctk.CTkButton(
             btns, text="Reset History", width=140, height=36,
-            corner_radius=8, fg_color=BRAND_BORDER,
+            corner_radius=12, fg_color=BRAND_BORDER,
             hover_color=BRAND_RED, text_color=BRAND_TEXT,
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             command=self._reset_history
@@ -806,16 +810,30 @@ class MigratifyApp(ctk.CTk):
     # ── Navigation ────────────────────────────────────────────────
 
     def _switch_tab(self, tab_name):
-        for key, page in self.pages.items():
-            page.grid_forget()
-
-        self.pages[tab_name].grid(row=0, column=0, sticky="nswe")
-
         for key, btn in self.nav_buttons.items():
             if key == tab_name:
-                btn.configure(fg_color=BRAND_CARD, text_color=BRAND_GREEN)
+                btn.configure(fg_color=BRAND_CARD, text_color=BRAND_ACCENT)
             else:
                 btn.configure(fg_color="transparent", text_color=BRAND_TEXT)
+
+        for key, page in self.pages.items():
+            if key != tab_name:
+                try:
+                    page.place_forget()
+                    page.grid_forget()
+                except: pass
+
+        self.pages[tab_name].grid_forget()
+        self.pages[tab_name].place(relx=0.08, rely=0, relwidth=1, relheight=1)
+        self._animate_slide(tab_name, 0.08)
+
+    def _animate_slide(self, tab_name, current_relx):
+        if current_relx > 0.002:
+            new_relx = current_relx * 0.7  # smooth ease out
+            self.pages[tab_name].place(relx=new_relx, rely=0, relwidth=1, relheight=1)
+            self.after(16, self._animate_slide, tab_name, new_relx)
+        else:
+            self.pages[tab_name].place(relx=0, rely=0, relwidth=1, relheight=1)
 
     # ── Logging ───────────────────────────────────────────────────
 
@@ -1258,7 +1276,7 @@ class MigratifyApp(ctk.CTk):
 
     def _render_fix_card(self, query, error, results, row_idx):
         card = ctk.CTkFrame(self.fix_scroll, fg_color=BRAND_CARD,
-                            corner_radius=12)
+                            corner_radius=20)
         card.pack(padx=4, pady=6, fill="x")
 
         header = ctk.CTkFrame(card, fg_color="transparent")
@@ -1296,7 +1314,7 @@ class MigratifyApp(ctk.CTk):
                 continue
 
             row = ctk.CTkFrame(card, fg_color=BRAND_SURFACE,
-                               corner_radius=8)
+                               corner_radius=12)
             row.pack(padx=12, pady=2, fill="x")
 
             ctk.CTkLabel(
