@@ -43,6 +43,7 @@ CSV_PATH = os.path.join(BASE_DIR, "library.csv") # Renamed generically
 HEADERS_PATH = os.path.join(BASE_DIR, "headers.txt")
 AUTH_JSON_PATH = os.path.join(BASE_DIR, "oauth.json")
 PROGRESS_PATH = os.path.join(BASE_DIR, "progress.json")
+HISTORY_PATH = os.path.join(BASE_DIR, "history.json")
 FAILED_CSV_PATH = os.path.join(BASE_DIR, "failed_songs.csv")
 # LOGS_PATH removed
 
@@ -126,6 +127,12 @@ LANG_DATA = {
         "pl_search": "Searching for your playlists...",
         "pl_select": "Enter the number of the playlist: ",
         "pl_created": f"{Fore.GREEN}✅ Playlist created: ",
+        "menu_main": f"\n{Fore.CYAN}=== MAIN MENU ==={Style.RESET_ALL}\n1. Normal Migration (1 CSV)\n2. Batch Migration (Folder of CSVs -> Playlists)\n3. Fix Errors Mode\n> ",
+        "wait_folder": f"{Fore.YELLOW}📂 'csv_batch' folder created/ready. Place CSVs there and press Enter...",
+        "empty_folder": f"{Fore.RED}❌ Folder is empty!",
+        "fix_title": f"\n{Fore.CYAN}🛠 FIX ERRORS MODE{Style.RESET_ALL}\n",
+        "fix_prompt": "Pick track (1-5) or 0 to skip: ",
+        "invalid_range": f"{Fore.RED}❌ Invalid range.",
         "invalid_range": f"{Fore.RED}❌ Invalid range.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ CSV Parsing: Reads any format. Universal and safe.",
@@ -199,6 +206,12 @@ LANG_DATA = {
         "pl_search": "Ищу ваши плейлисты...",
         "pl_select": "Введите номер плейлиста из списка: ",
         "pl_created": f"{Fore.GREEN}✅ Плейлист создан: ",
+        "menu_main": f"\n{Fore.CYAN}=== ГЛАВНОЕ МЕНЮ ==={Style.RESET_ALL}\n1. Обычная миграция (один CSV -> Лайки/Плейлист)\n2. Перенос папки (каждый CSV -> отдельный плейлист)\n3. Режим исправления ошибок\n> ",
+        "wait_folder": f"{Fore.YELLOW}📂 Папка 'csv_batch' готова. Положите туда CSV файлы и нажмите Enter...",
+        "empty_folder": f"{Fore.RED}❌ Папка пуста!",
+        "fix_title": f"\n{Fore.CYAN}🛠 РЕЖИМ ИСПРАВЛЕНИЯ ОШИБОК{Style.RESET_ALL}\n",
+        "fix_prompt": "Выберите трек (1-5) или 0 чтобы пропустить: ",
+        "invalid_range": f"{Fore.RED}❌ Неверный диапазон.",
         "invalid_range": f"{Fore.RED}❌ Неверный диапазон.",
         "service_flaws": {
             "csv": f"{Fore.GREEN}✓ Универсальный CSV: Безопасно, читает скачанные базы файлов любого сервиса.",
@@ -317,7 +330,136 @@ def universal_csv_parser(filepath):
     log_to_file(f"Successfully parsed {len(songs)} songs from CSV.")
     return songs
 
+
+def load_history():
+    if os.path.exists(HISTORY_PATH):
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                return set((json.load(f)))
+        except: pass
+    return set()
+
+def save_history(history_set):
+    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+        json.dump(list(history_set), f)
+
+def fix_errors_mode(ytm, t):
+    print(t['fix_title'])
+    if not os.path.exists(FAILED_CSV_PATH):
+        print(f"{Fore.GREEN}✅ No errors to fix!")
+        return
+    history_set = load_history()
+    failed = []
+    with open(FAILED_CSV_PATH, 'r', encoding='utf-8') as f:
+        import csv
+        for row in csv.reader(f):
+            if row and len(row)>1 and row[1] != "Query":
+                failed.append((row[0], row[1], row[2]))
+    
+    if not failed:
+        print(f"{Fore.GREEN}✅ No errors to fix!")
+        return
+        
+    remaining = []
+    for row_idx, query, err in failed:
+        print(f"\n{Fore.YELLOW}🔎 Searching: {query} (was: {err})")
+        results = ytm.search(query, filter="songs")[:5]
+        if not results:
+            print(f"{Fore.RED}❌ Still no results.")
+            remaining.append((row_idx, query, err))
+            continue
+        valid_res = []
+        for i, res in enumerate(results):
+            artist = ", ".join([a['name'] for a in res.get('artists', [])]) if res.get('artists') else 'Unknown'
+            title = res.get('title', 'Unknown')
+            dur = res.get('duration', '?:??')
+            vid = res.get('videoId')
+            if vid:
+                valid_res.append(vid)
+                print(f"  {len(valid_res)}. {dur} | {artist} - {title}")
+                
+        if not valid_res:
+            remaining.append((row_idx, query, err))
+            continue
+            
+        choice = input(t['fix_prompt']).strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(valid_res):
+            vid = valid_res[int(choice)-1]
+            if vid not in history_set:
+                ytm.rate_song(vid, 'LIKE')
+                history_set.add(vid)
+                save_history(history_set)
+            print(f"{Fore.GREEN}✅ Fixed!")
+        else:
+            remaining.append((row_idx, query, err))
+
+    if remaining:
+        with open(FAILED_CSV_PATH, 'w', encoding='utf-8', newline='') as f:
+            w = csv.writer(f)
+            w.writerow(["Row", "Query", "Error"])
+            w.writerows(remaining)
+    else:
+        os.remove(FAILED_CSV_PATH)
+    print(f"{Fore.GREEN}✅ Done.")
+
+def batch_mode(ytm, t):
+    batch_dir = os.path.join(BASE_DIR, 'csv_batch')
+    os.makedirs(batch_dir, exist_ok=True)
+    input(t['wait_folder'])
+    csvs = [f for f in os.listdir(batch_dir) if f.endswith('.csv')]
+    if not csvs:
+        print(t['empty_folder'])
+        return
+    
+    is_smart = input(t['menu_smart']).strip() == "1"
+    history_set = load_history()
+    
+    for f in csvs:
+        fp = os.path.join(batch_dir, f)
+        pl_name = f[:-4]
+        songs = universal_csv_parser(fp)
+        if not songs: continue
+        print(f"\n{Fore.GREEN}📁 Processing {pl_name} ({len(songs)} tracks)")
+        pl_id = ytm.create_playlist(pl_name, "Migrated via Migratify")
+        import time
+        time.sleep(1)
+        
+        from tqdm import tqdm
+        pbar = tqdm(songs, desc=pl_name[:20], unit="song")
+        for offset, data in enumerate(pbar):
+            artist = data['artist']
+            track = data['track']
+            query = f"{artist} - {track}".strip(" -")
+            if not query: continue
+            try:
+                res = ytm.search(query, filter="songs")
+                vid = None
+                if res:
+                    if is_smart and data['target_sec']:
+                        for r in res:
+                            dur = get_duration_sec(r.get('duration'))
+                            if dur and abs(dur - data['target_sec'])<=90:
+                                vid = r['videoId']
+                                break
+                    if not vid and res[0].get('videoId'):
+                        vid = res[0]['videoId']
+                if vid:
+                    ytm.add_playlist_items(pl_id, [vid])
+                    history_set.add(vid)
+                    pbar.set_postfix_str("OK")
+                else:
+                    log_failed_song(offset+1, query, "Not found")
+                    pbar.set_postfix_str("FAIL")
+            except Exception as e:
+                pbar.set_postfix_str("ERR")
+            
+            if offset % 10 == 0:
+                save_history(history_set)
+                time.sleep(0.3)
+        save_history(history_set)
+
 def main():
+
     lang_code = get_language()
     t = LANG_DATA[lang_code]
     log_to_file(f"Session started. Language: {lang_code}")
@@ -548,6 +690,7 @@ def main():
                 target_playlist_id = playlists[p_idx]['playlistId']
 
     # Progress load
+    history_set = load_history()
     progress = load_progress()
     total = end_idx - start_idx
 
@@ -602,10 +745,12 @@ def main():
                         
                 if matched_video_id:
                     if not is_dry_run:
-                        if target_playlist_id:
-                            ytm.add_playlist_items(target_playlist_id, [matched_video_id])
-                        else:
-                            ytm.rate_song(matched_video_id, 'LIKE')
+                        if matched_video_id not in history_set:
+                            if target_playlist_id:
+                                ytm.add_playlist_items(target_playlist_id, [matched_video_id])
+                            else:
+                                ytm.rate_song(matched_video_id, 'LIKE')
+                            history_set.add(matched_video_id)
                     
                     progress["migrated_count"] += 1
                     status_text = f"{Fore.GREEN}OK" if not is_dry_run else f"{Fore.GREEN}Found"
@@ -635,6 +780,7 @@ def main():
             if offset % 10 == 0 or offset == len(songs_to_process) - 1:
                 if not is_dry_run and not custom_range:
                     save_progress(progress)
+                    save_history(history_set)
                 
                 if not is_dry_run:
                     time.sleep(0.3)
