@@ -1,0 +1,27 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip Release
+        run: |
+          zip -r migratify-${{ github.ref_name }}.zip . -x "*.git*" "venv/*" "__pycache__/*" "headers.txt" "oauth.json" "progress.json" "*.csv" "*.pyc" ".env" "logs.txt"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: migratify-${{ github.ref_name }}.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
