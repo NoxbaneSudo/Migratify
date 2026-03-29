@@ -267,29 +267,37 @@ def main():
             print(t['setup_auth'])
             try:
                 raw_content = load_headers(HEADERS_PATH).strip()
-                if "cookie:" in raw_content.lower() and "x-goog-authuser:" not in raw_content.lower():
-                    raw_content += "\nx-goog-authuser: 0"
+                low_content = raw_content.lower()
                 
+                # Check for critical absence of cookie early
+                if "cookie" not in low_content:
+                    print(f"\n{Fore.RED}❌ ERROR: 'cookie' not found in headers!")
+                    print(f"{Fore.YELLOW}Tip: You probably copied an image/font request. Search for 'browse' or 'next' in the Network tab and copy THAT request as cURL (bash).")
+                    if input(t['retry_msg']).lower() == 'y': continue
+                    else: return
+
+                # Auto-inject x-goog-authuser if missing and if it's a bash cURL
+                if "x-goog-authuser" not in low_content:
+                    if low_content.startswith("curl"):
+                        # Remove trailing chars to cleanly append
+                        raw_content = raw_content.rstrip().rstrip('\\').rstrip(';')
+                        raw_content += " -H 'x-goog-authuser: 0'"
+                    else:
+                        raw_content += "\nx-goog-authuser: 0"
+                
+                # Try to setup
                 setup_browser(AUTH_JSON_PATH, raw_content)
                 print(t['auth_created'])
                 log_to_file("Auth file created successfully.")
             except Exception as e:
                 error_str = str(e)
                 log_to_file(f"Auth creation failed: {error_str}")
-                if "x-goog-authuser" in error_str:
-                    try:
-                        raw_content = load_headers(HEADERS_PATH).strip() + "\nx-goog-authuser: 0"
-                        setup_browser(AUTH_JSON_PATH, raw_content)
-                        print(f"{Fore.YELLOW}⚠️ Using default authuser=0. {t['auth_created']}")
-                        log_to_file("Forced authuser=0 and succeeded.")
-                    except Exception as e2:
-                        print(f"{t['auth_err']}{e2}")
-                        if input(t['retry_msg']).lower() == 'y': continue
-                        else: return
-                else:
-                    print(f"{t['auth_err']}{e}")
-                    if input(t['retry_msg']).lower() == 'y': continue
-                    else: return
+                print(f"{t['auth_err']}\n{error_str}")
+                print(f"{Fore.YELLOW}Hint: Make sure headers.txt contains EXACTLY ONE 'cURL (bash)' request.")
+                if "^" in raw_content:
+                    print(f"{Fore.RED}⚠️ Windows Users: Do NOT choose 'cURL (cmd)'. You must select 'cURL (bash)'.")
+                if input(t['retry_msg']).lower() == 'y': continue
+                else: return
 
         try:
             ytm = YTMusic(AUTH_JSON_PATH)
