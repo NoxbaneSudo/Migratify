@@ -139,8 +139,20 @@ def save_progress(progress):
         json.dump(progress, f, indent=4)
 
 def load_headers(filepath):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return f.read()
+    # Try different encodings for weird windows notepad saves
+    for enc in ['utf-8', 'utf-16', 'utf-8-sig', 'cp1251']:
+        try:
+            with open(filepath, 'r', encoding=enc) as f:
+                content = f.read().strip()
+                if content: return content
+        except Exception:
+            pass
+    # Fallback to binary with ignore if all fails
+    try:
+        with open(filepath, 'rb') as f:
+            return f.read().decode('utf-8', errors='ignore').strip()
+    except Exception:
+        return ""
 
 def log_failed_song(idx, query, reason):
     file_exists = os.path.isfile(FAILED_CSV_PATH)
@@ -269,10 +281,18 @@ def main():
                 raw_content = load_headers(HEADERS_PATH).strip()
                 low_content = raw_content.lower()
                 
+                if low_content.startswith("http"):
+                    print(f"\n{Fore.RED}❌ ОШИБКА: Вы вставили обычную ссылку (URL) вместо команды cURL!")
+                    print(f"{Fore.YELLOW}Нужно нажать правой кнопкой мыши по запросу -> 'Copy' -> 'Copy as cURL (bash)'.")
+                    if input(t['retry_msg']).lower() == 'y': continue
+                    else: return
+
                 # Check for critical absence of cookie early
                 if "cookie" not in low_content:
-                    print(f"\n{Fore.RED}❌ ERROR: 'cookie' not found in headers!")
-                    print(f"{Fore.YELLOW}Tip: You probably copied an image/font request. Search for 'browse' or 'next' in the Network tab and copy THAT request as cURL (bash).")
+                    print(f"\n{Fore.RED}❌ ОШИБКА: Заголовок 'cookie' не найден в {HEADERS_PATH}!")
+                    safe_print = raw_content[:80].replace('\n', ' ')
+                    print(f"{Fore.YELLOW}Отладка: Скрипт видит такой текст: '{safe_print}...'\nДлина текста: {len(raw_content)} символов.")
+                    print(f"👉 Убедитесь, что вы скопировали ВЕСЬ блок cURL (bash) из запроса 'browse' целиком.")
                     if input(t['retry_msg']).lower() == 'y': continue
                     else: return
 
