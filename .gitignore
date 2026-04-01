@@ -13,3 +13,12 @@ oauth.json
 progress.json
 failed_songs.csv
 logs.txt
+settings.json
+history.json
+.agents/
+
+# Local Assets & Batch
+assets/*.ttf
+assets/*.png
+assets/*.jpg
+csv_batch/
